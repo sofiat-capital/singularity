@@ -2,17 +2,15 @@
 # decision -- BUY OR SELL AS OUTPUT TO CONSOLE
 import os
 import mysql.connector
+from mysql.connector import Error
+from mysql.connector import errorcode
 import datetime, time
 import json
 import numpy as np
 import schedule
-from mysql.connector import Error
-from mysql.connector import errorcode
+
 
 import requests
-from bs4 import BeautifulSoup
-
-
 
 # CLASS PERFORMS ALL MANIPULATION OF MYSQL TABLES
 class BinanceAPI(object):
@@ -48,7 +46,7 @@ class BinanceAPI(object):
     # METHOD SCRAPES YAHOO.COM AND INSERTS DATA INTO realTime TABLE
     def query(self, currency = "BTCUSDT"):
 
-    
+
         cnx = mysql.connector.connect(user='root', password='Th3T3chBoy$',
                                       host='127.0.0.1',
                                       database='stockportfolio')
@@ -133,7 +131,10 @@ class BinanceAPI(object):
 if __name__ == '__main__':
 
     api = BinanceAPI()
+    print("...get_price")
     api.get_price("BTCUSDT")
+    print("...query")
+    api.query()
 
     #yahoo_api.query()
     #yahoo_api.run(interval = 10, max_iterations = 1440)
