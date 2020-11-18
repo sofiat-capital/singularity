@@ -24,6 +24,8 @@ class BinanceAPI(object):
         return
 
     def get_price(self, currency = "BTCUSDT"):
+        '''
+        '''
         url = 'api/v3/avgPrice?symbol='
         try:
             endpoint = self.params.get("endpoint") + url + currency
