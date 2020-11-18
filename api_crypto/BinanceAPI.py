@@ -8,19 +8,29 @@ import datetime, time
 import json
 import numpy as np
 import schedule
+import logging
 
 
 import requests
+logging.basicConfig(filename='example.log', filemode='w', level=logging.INFO)
+log = logging.Logger('test')
+
 
 # CLASS PERFORMS ALL MANIPULATION OF MYSQL TABLES
 class BinanceAPI(object):
     def __init__(self):
-
-        self.params = {"api_key"    : os.environ.get('binance_api'),
-                       "secret_api" : os.environ.get('binance_secret'),
-                       "endpoint"   : "https://api.binance.com/",
-                       "yahoo"      : 'https://finance.yahoo.com/quote/AAPL?p=AAPL&.tsrc=fin-srch'
+        log.info('initializing BinanceAPI')
+        self.keychain = {"api_key"    : os.environ.get('binance_api'),
+                         "secret_api" : os.environ.get('binance_secret'),
+                         "mysql_key"  : os.environ.get('mysql_key'),
+                         "endpoint"   : "https://api.binance.com/",
                     }
+
+        self.cnx = mysql.connector.connect(user='root',
+                                      password=self.keychain.get('mysql_key', None),
+                                      host='127.0.0.1',
+                                      database='stockportfolio',
+                                      auth_plugin='mysql_native_password')
         return
 
     def get_price(self, currency = "BTCUSDT"):
@@ -28,7 +38,7 @@ class BinanceAPI(object):
         '''
         url = 'api/v3/avgPrice?symbol='
         try:
-            endpoint = self.params.get("endpoint") + url + currency
+            endpoint = self.keychain.get("endpoint") + url + currency
             print(endpoint)
             self.response = json.loads(requests.get(endpoint).text)
             print(self.response)
@@ -45,63 +55,40 @@ class BinanceAPI(object):
         timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
         return timestamp
 
-    # METHOD SCRAPES YAHOO.COM AND INSERTS DATA INTO realTime TABLE
+    # INSERTS REAL TIME PRICE DATA THAT IS OBTAINED FROM API
     def query(self, currency = "BTCUSDT"):
-
-
-        cnx = mysql.connector.connect(user='root', password='Th3T3chBoy$',
-                                      host='127.0.0.1',
-                                      database='stockportfolio',
-                                      auth_plugin='mysql_native_password')
         timestamp = self._get_current_time
         response = self.get_price(currency)
 
-        price = round(float(response.get("price")),2)
-
-        print(price)
+        price = float(response.get("price"))
 
         mySql_insert_query = """INSERT INTO realtime (idrealtime, fk_idproduct_realTime, observedPrice, observedTime)
                                VALUES
                                (null, 1, %s, %s) """
 
-
         recordTuple = (price, timestamp)
-        cursor = cnx.cursor()
+        cursor = self.cnx.cursor()
         cursor.execute(mySql_insert_query, recordTuple)
-        cnx.commit()
+        self.cnx.commit()
         print(cursor.rowcount, "Record inserted successfully into table")
         cursor.close()
-        cnx.close()
-
         return
 
+    # OBTAINS VALUE STORED IN DATABASE ASSOCIATED WITH TICKER PASSED
     def _get_ticker_id(self, ticker):
-
-        cnx = mysql.connector.connect(user='root', password='Th3T3chBoy$',
-                                      host='127.0.0.1',
-                                      database='stockportfolio')
-
         # SELECT gets the associated product NUMBER from the ticker passed
         select_stmt = "SELECT idproduct FROM product WHERE ticker = '{}'".format(ticker)
-        cursor = cnx.cursor()
+
+        cursor = self.cnx.cursor()
         cursor.execute(select_stmt)
         result = cursor.fetchall()
         result = np.array(result).flatten()[0]   # List becomes single value
         cursor.close()
-        print(select_stmt)
-        print('RESULT:  ', result)
+
         return result
 
-
+    # ENTERS DATA INTO TRANSACTION TO TRACK TRADE HISTORY
     def transaction(self, input_ticker, value=0):
-        '''
-        # Transaction Method gets passed a ticker value, finds associated Ticker# within database
-        # and then inserts the transaction into the Transaction Table.
-        '''
-        cnx = mysql.connector.connect(user='root', password='Th3T3chBoy$',
-                                      host='127.0.0.1',
-                                      database='stockportfolio')
-
         product_id = self._get_ticker_id(input_ticker)
 
         mySql_insert_query = """INSERT INTO transaction (idtransaction, fk_idproduct_transaction, transactionTime, buySell, price) VALUES (null, %s, %s, true, %s)"""
@@ -110,38 +97,28 @@ class BinanceAPI(object):
         print('Timestamp:  ', timestamp)
         recordTuple = (str(product_id), timestamp, str(value))
         print('recordTuple', recordTuple)
-        cursor = cnx.cursor()
+        cursor = self.cnx.cursor()
         print('Executing....')
         cursor.execute(mySql_insert_query, recordTuple)
-        cnx.commit()
+        self.cnx.commit()
         cursor.close()
-        cnx.close()
         print('Success')
         return
 
 
-    def run(self, interval = 600, max_iterations = 100):
-        '''schedule the query for given interval'''
-        schedule.every(interval).seconds.do(self.query)
-        iterations = 0
-        start = time.time()
-        print("... running:  ", iterations)
-        while interval < max_iterations:
-            print('iteration:  ', iterations)
-            schedule.run_pending()
-            time.sleep(interval)
-            iterations+=1
-
-        print('.. complete in {} seconds'.format(time.time() - start))
-        return
+    def __del__(self):
+        print("closing API...")
+        self.cnx.close()
 
 if __name__ == '__main__':
-
+    symbols = ['ETHUSDT', 'BTCUSDT']
     api = BinanceAPI()
-    print("...get_price")
-    api.get_price("BTCUSDT")
-    print("...query")
-    api.query()
 
-    #yahoo_api.query()
-    #yahoo_api.run(interval = 10, max_iterations = 1440)
+    for ticker in symbols:
+
+        print("...get_price:  ", ticker)
+        api.get_price(ticker)
+
+        print("...query", ticker)
+        api.query(currency = ticker)
+        api.query(currency = ticker)
