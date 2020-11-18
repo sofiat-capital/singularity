@@ -15,10 +15,10 @@ import requests
 logging.basicConfig(filename='example.log', filemode='w', level=logging.INFO)
 log = logging.Logger('test')
 
-'''
+
 # USED FOR COMMON METHODS IN BINANCE API HELPER CLASSES
 class BaseAPI(object):
-    def __init__(object):
+    def __init__(self):
         self.keychain = {"api_key"    : os.environ.get('binance_api'),
                          "secret_api" : os.environ.get('binance_secret'),
                          "mysql_key"  : os.environ.get('mysql_key'),
@@ -30,36 +30,36 @@ class BaseAPI(object):
                                       host='127.0.0.1',
                                       database='stockportfolio',
                                       auth_plugin='mysql_native_password')
-
-    def log(self, msg=""):
-        print()
-        return
-
 
     @property
     def _get_current_time(self):
         ts = time.time()
         timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
         return timestamp
-'''
+
+    # OBTAINS VALUE STORED IN DATABASE ASSOCIATED WITH TICKER PASSED
+    def _get_ticker_id(self, ticker):
+        # SELECT gets the associated product NUMBER from the ticker passed
+        select_stmt = "SELECT idproduct FROM product WHERE ticker = '{}'".format(ticker)
+
+        cursor = self.cnx.cursor()
+        cursor.execute(select_stmt)
+        result = cursor.fetchall()
+        result = np.array(result).flatten()[0]   # List becomes single value
+        cursor.close()
+        return result
+
+
+    def log(self, msg=""):
+        print('{} - Binance API : {}'.format(self._get_current_time, msg))
+        return
 
 
 # CLASS PERFORMS ALL MANIPULATION OF MYSQL TABLES
 class BinanceAPI(BaseAPI):
     def __init__(self):
-        log.info('initializing BinanceAPI')
-
-        self.keychain = {"api_key"    : os.environ.get('binance_api'),
-                         "secret_api" : os.environ.get('binance_secret'),
-                         "mysql_key"  : os.environ.get('mysql_key'),
-                         "endpoint"   : "https://api.binance.com/",
-                    }
-
-        self.cnx = mysql.connector.connect(user='root',
-                                      password=self.keychain.get('mysql_key', None),
-                                      host='127.0.0.1',
-                                      database='stockportfolio',
-                                      auth_plugin='mysql_native_password')
+        self.log('initializing BinanceAPI')
+        BaseAPI.__init__(self)
         return
 
     ############################################################################
@@ -69,17 +69,10 @@ class BinanceAPI(BaseAPI):
         schedule.every(interval).seconds.do(self.query)
         #schedule.every(interval).seconds.do(self.monitor)
         while True:
-            print('running:  ', self._get_current_time)
+            self.log('running... ')
             schedule.run_pending()
             time.sleep(interval)
         return
-
-        # METHOD GETS CURRENT TIME
-        @property
-        def _get_current_time(self):
-            ts = time.time()
-            timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-            return timestamp
 
     ############################################################################
     # BINANCE API RELATED
@@ -88,9 +81,9 @@ class BinanceAPI(BaseAPI):
         url = 'api/v3/avgPrice?symbol='
         try:
             endpoint = self.keychain.get("endpoint") + url + currency
-            print(endpoint)
+            self.log(endpoint)
             self.response = json.loads(requests.get(endpoint).text)
-            print(self.response)
+            self.log(self.response)
         except:
             self.response = {}
         return self.response
@@ -112,21 +105,11 @@ class BinanceAPI(BaseAPI):
         cursor = self.cnx.cursor()
         cursor.execute(mySql_insert_query, recordTuple)
         self.cnx.commit()
-        print(cursor.rowcount, "Record inserted successfully into table")
+        self.log('Record inserted successfully into table {}'.format(cursor.rowcount))
         cursor.close()
         return
 
-    # OBTAINS VALUE STORED IN DATABASE ASSOCIATED WITH TICKER PASSED
-    def _get_ticker_id(self, ticker):
-        # SELECT gets the associated product NUMBER from the ticker passed
-        select_stmt = "SELECT idproduct FROM product WHERE ticker = '{}'".format(ticker)
 
-        cursor = self.cnx.cursor()
-        cursor.execute(select_stmt)
-        result = cursor.fetchall()
-        result = np.array(result).flatten()[0]   # List becomes single value
-        cursor.close()
-        return result
 
     # ENTERS DATA INTO TRANSACTION TO TRACK TRADE HISTORY
     def transaction(self, input_ticker, value=0):
@@ -135,19 +118,19 @@ class BinanceAPI(BaseAPI):
         mySql_insert_query = """INSERT INTO transaction (idtransaction, fk_idproduct_transaction, transactionTime, buySell, price) VALUES (null, %s, %s, true, %s)"""
         timestamp = self._get_current_tim
 
-        print('Timestamp:  ', timestamp)
+        #self.log('Timestamp:  ', timestamp)
         recordTuple = (str(product_id), timestamp, str(value))
-        print('recordTuple', recordTuple)
+        self.log('recordTuple', recordTuple)
         cursor = self.cnx.cursor()
-        print('Executing....')
+        self.log('Executing....')
         cursor.execute(mySql_insert_query, recordTuple)
         self.cnx.commit()
         cursor.close()
-        print('Success')
+        self.log('Success')
         return
 
     def __del__(self):
-        print("closing API...")
+        self.log("closing API...")
         self.cnx.close()
 
 
@@ -155,11 +138,14 @@ class BinanceAPI(BaseAPI):
 ############################################################################
 #MAIN CODE MAIN CODE MAIN CODE MAIN
 ############################################################################
-
 if __name__ == '__main__':
     symbols = ['ETHUSDT', 'BTCUSDT']
     api = BinanceAPI()
     api.run()
+
+
+
+
 
     '''  FOR TESTING
     for ticker in symbols:
