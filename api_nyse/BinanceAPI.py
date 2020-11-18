@@ -31,7 +31,7 @@ class BinanceAPI(object):
             self.response = json.loads(requests.get(endpoint).text)
             print(self.response)
         except:
-            print("shit fuuuuck dude")
+
             self.response = {}
 
         return self.response
@@ -49,16 +49,21 @@ class BinanceAPI(object):
 
         cnx = mysql.connector.connect(user='root', password='Th3T3chBoy$',
                                       host='127.0.0.1',
-                                      database='stockportfolio')
+                                      database='stockportfolio',
+                                      auth_plugin='mysql_native_password')
         timestamp = self._get_current_time
         response = self.get_price(currency)
+
+        price = round(float(response.get("price")),2)
+
+        print(price)
 
         mySql_insert_query = """INSERT INTO realtime (idrealtime, fk_idproduct_realTime, observedPrice, observedTime)
                                VALUES
                                (null, 1, %s, %s) """
 
 
-        recordTuple = (response.get("price"),timestamp)
+        recordTuple = (price, timestamp)
         cursor = cnx.cursor()
         cursor.execute(mySql_insert_query, recordTuple)
         cnx.commit()
