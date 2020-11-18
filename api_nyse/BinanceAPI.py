@@ -2,17 +2,15 @@
 # decision -- BUY OR SELL AS OUTPUT TO CONSOLE
 import os
 import mysql.connector
+from mysql.connector import Error
+from mysql.connector import errorcode
 import datetime, time
 import json
 import numpy as np
 import schedule
-from mysql.connector import Error
-from mysql.connector import errorcode
+
 
 import requests
-from bs4 import BeautifulSoup
-
-
 
 # CLASS PERFORMS ALL MANIPULATION OF MYSQL TABLES
 class BinanceAPI(object):
@@ -33,7 +31,7 @@ class BinanceAPI(object):
             self.response = json.loads(requests.get(endpoint).text)
             print(self.response)
         except:
-            print("shit fuuuuck dude")
+
             self.response = {}
 
         return self.response
@@ -48,19 +46,24 @@ class BinanceAPI(object):
     # METHOD SCRAPES YAHOO.COM AND INSERTS DATA INTO realTime TABLE
     def query(self, currency = "BTCUSDT"):
 
-    
+
         cnx = mysql.connector.connect(user='root', password='Th3T3chBoy$',
                                       host='127.0.0.1',
-                                      database='stockportfolio')
+                                      database='stockportfolio',
+                                      auth_plugin='mysql_native_password')
         timestamp = self._get_current_time
         response = self.get_price(currency)
+
+        price = round(float(response.get("price")),2)
+
+        print(price)
 
         mySql_insert_query = """INSERT INTO realtime (idrealtime, fk_idproduct_realTime, observedPrice, observedTime)
                                VALUES
                                (null, 1, %s, %s) """
 
 
-        recordTuple = (response.get("price"),timestamp)
+        recordTuple = (price, timestamp)
         cursor = cnx.cursor()
         cursor.execute(mySql_insert_query, recordTuple)
         cnx.commit()
@@ -133,7 +136,10 @@ class BinanceAPI(object):
 if __name__ == '__main__':
 
     api = BinanceAPI()
+    print("...get_price")
     api.get_price("BTCUSDT")
+    print("...query")
+    api.query()
 
     #yahoo_api.query()
     #yahoo_api.run(interval = 10, max_iterations = 1440)
