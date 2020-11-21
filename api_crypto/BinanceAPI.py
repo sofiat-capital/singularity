@@ -4,8 +4,10 @@ import os
 import mysql.connector
 from mysql.connector import Error
 from mysql.connector import errorcode
-import datetime, time
+from datetime import datetime
+import time
 import json
+import pandas as pd
 import numpy as np
 import schedule
 import logging
@@ -34,8 +36,9 @@ class BaseAPI(object):
     @property
     def _get_current_time(self):
         ts = time.time()
-        timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
         return timestamp
+
 
     # OBTAINS VALUE STORED IN DATABASE ASSOCIATED WITH TICKER PASSED
     def _get_ticker_id(self, ticker):
@@ -74,8 +77,55 @@ class BinanceAPI(BaseAPI):
             time.sleep(interval)
         return
 
+    # FORMATS BINANCE API TIMESTAMP INTO READABLE (D:H:M:S) FORMAT
+    def time(self):
+        url = "api/v3/time"
+        endpoint = self.keychain.get('endpoint') + url
+        try:
+            self.response = json.loads(requests.get(endpoint).text)
+            time = self.response.get('serverTime')
+            self.log(time)
+            self.log(datetime.fromtimestamp(int(time)/1000))
+        except:
+            self.response = {}
+        return self.response
+
+    @staticmethod
+    def from_timestamp(timestamp):
+        return datetime.fromtimestamp(int(timestamp)/1000).strftime('%Y-%m-%d %H:%M:%S')
+
     ############################################################################
-    # BINANCE API RELATED
+    # BINANCE WEB API FUNCTIONS
+    # CALLS KLINE ENDPOINT IN BINANCE API
+    def kline(self, **params):  #myFunction(self,dictionary)
+        '''Precondition: acceptes symbol (needed), limit, interval='1hr/1d/etc'
+        '''
+        assert 'symbol' in params.keys(), 'need symbol in kline()'
+
+        url = 'api/v3/klines?' + '&'.join(f'{key}={value}' for key, value in params.items())
+        endpoint = self.keychain.get('endpoint') + url
+        self.log(endpoint)
+        self.response = json.loads(requests.get(endpoint).text)
+        frame = pd.DataFrame([self._format_kline(kline) for kline in self.response])
+        frame['symbol'] = [params.get('symbol')] * len(frame)
+
+        return frame
+
+
+    # (HIDDEN FUNCTION) LIST COMPREHENSION CONCATONATES DESCRIPTIONS TO VALUES
+    def _format_kline(self, kline):
+        kline_frame = {}
+        kline_map = ["open_time", "open", "high", "low", "close", "volume", "close_time", \
+                    "quote_asset_volume", "number_of_trades", \
+                    "taker_buy_base_asset_volume", "taker_buy_quote_asset_volume",
+                    "ignore"]
+
+        [kline_frame.update({name : value}) for name, value in zip(kline_map, kline)]
+
+        kline_frame['open_time']  = '{}'.format(self.from_timestamp(kline_frame['open_time']))
+        kline_frame['close_time'] = '{}'.format(self.from_timestamp(kline_frame['close_time']))
+        return kline_frame
+
     # MAKES GET REQUEST TO BINANCE API TO RETRIEVE CURRENT PRICES
     def get_price(self, currency = "BTCUSDT"):
         url = 'api/v3/avgPrice?symbol='
@@ -91,6 +141,34 @@ class BinanceAPI(BaseAPI):
     ############################################################################
     # SQL RELATED FUNCTIONS
     # INSERTS REAL TIME PRICE DATA THAT IS OBTAINED FROM API
+
+    def insertDayCandle(self, daycandles):
+        '''Precondition: daycandles is the result of self.kline
+        '''
+        columns = ['close_time', 'low', 'high', 'open', 'close', 'volume']
+
+        for column in columns[1:]:
+            daycandles[column] = np.array(daycandles[column], dtype=float)
+
+        mySql_insert_query = """INSERT INTO dayCandle (iddayCandle, fk_idproduct_dayCandle, date, low, hi, open, close, volume)
+                               VALUES
+                               (null, %s, %s, %s, %s, %s, %s, %s) """
+
+        cursor = self.cnx.cursor()
+
+        for i, candle in daycandles.iterrows():
+            symbol_id = self._get_ticker_id(candle['symbol'])
+            recordTuple = list(candle[columns])
+            recordTuple.insert(0, str(symbol_id))
+            cursor.execute(mySql_insert_query, recordTuple)
+            self.cnx.commit()
+
+
+        self.log('Record inserted successfully into dayCande {}'.format(cursor.rowcount))
+        cursor.close()
+        return
+
+
     def query(self, currency = "BTCUSDT"):
         timestamp = self._get_current_time
         response = self.get_price(currency)
@@ -108,8 +186,6 @@ class BinanceAPI(BaseAPI):
         self.log('Record inserted successfully into table {}'.format(cursor.rowcount))
         cursor.close()
         return
-
-
 
     # ENTERS DATA INTO TRANSACTION TO TRACK TRADE HISTORY
     def transaction(self, input_ticker, value=0):
@@ -129,9 +205,9 @@ class BinanceAPI(BaseAPI):
         self.log('Success')
         return
 
-    def __del__(self):
-        self.log("closing API...")
-        self.cnx.close()
+    #def __del__(self):
+    #    self.log("closing API...")
+    #    self.cnx.close()
 
 
 
@@ -139,15 +215,13 @@ class BinanceAPI(BaseAPI):
 #MAIN CODE MAIN CODE MAIN CODE MAIN
 ############################################################################
 if __name__ == '__main__':
-    symbols = ['ETHUSDT', 'BTCUSDT']
-    api = BinanceAPI()
-    api.run()
-
-
-
-
+    api = BinanceAPI()  #Creates object (instance of BinanceAPI class)
+    #api.run()
+    api.time()
 
     '''  FOR TESTING
+    result = api.kline(symbol='BTCUSDT', limit=2, interval='1d'
+
     for ticker in symbols:
 
         print("...get_price:  ", ticker)
