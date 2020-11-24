@@ -4,6 +4,7 @@ import schedule
 from interface.DataBaseAPI import DataBaseAPI
 from interface.base_api import BaseAPI
 from interface.BinanceAPI import BinanceAPI
+from interface.AnalyticsAPI import AnalyticsAPI
 
 
 class MasterAPI(BaseAPI):
@@ -13,6 +14,10 @@ class MasterAPI(BaseAPI):
 
         self.DataBaseAPI = DataBaseAPI()
         self.BinanceAPI = BinanceAPI()
+        self.AnalyticsAPI = AnalyticsAPI()
+
+
+
         return
 
     ############################################################################
@@ -33,4 +38,5 @@ class MasterAPI(BaseAPI):
 ############################################################################
 if __name__ == '__main__':
     api = MasterAPI()  #Creates object (instance of BinanceAPI class)
-    api.current_time
+    api.AnalyticsAPI.MovingAverage()
+    #api.AnalyticsAPI.MovingAverage()
