@@ -1,8 +1,0 @@
-INFO:schedule:Running job Every 10 seconds do query() (last run: [never], next run: 2020-11-17 21:13:18)
-INFO:schedule:Running job Every 10 seconds do query() (last run: 2020-11-17 21:13:19, next run: 2020-11-17 21:13:29)
-INFO:schedule:Running job Every 10 seconds do query() (last run: 2020-11-17 21:13:30, next run: 2020-11-17 21:13:40)
-INFO:schedule:Running job Every 10 seconds do query() (last run: 2020-11-17 21:13:41, next run: 2020-11-17 21:13:51)
-INFO:schedule:Running job Every 10 seconds do query() (last run: 2020-11-17 21:13:51, next run: 2020-11-17 21:14:01)
-INFO:schedule:Running job Every 10 seconds do query() (last run: 2020-11-17 21:14:02, next run: 2020-11-17 21:14:12)
-INFO:schedule:Running job Every 10 seconds do query() (last run: 2020-11-17 21:14:13, next run: 2020-11-17 21:14:23)
-INFO:schedule:Running job Every 10 seconds do query() (last run: 2020-11-17 21:14:24, next run: 2020-11-17 21:14:34)
