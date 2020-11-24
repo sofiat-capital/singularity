@@ -29,6 +29,7 @@ class DataBaseAPI(BaseAPI):
 
         for column in columns[1:-1]:
             daycandles[column] = np.array(daycandles[column], dtype=float)
+
         daycandles[columns[-1]] = np.array(daycandles[column], dtype=int)
 
         mySql_insert_query = """INSERT INTO dayCandle (iddayCandle, fk_idproduct_dayCandle, date, low, hi, open, close, volume, numtrades)
@@ -43,7 +44,6 @@ class DataBaseAPI(BaseAPI):
             recordTuple.insert(0, str(symbol_id))
             cursor.execute(mySql_insert_query, recordTuple)
             self.cnx.commit()
-
 
         self.log('Record inserted successfully into dayCandle {}'.format(cursor.rowcount))
         cursor.close()
