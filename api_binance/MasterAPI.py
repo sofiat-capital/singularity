@@ -38,5 +38,5 @@ class MasterAPI(BaseAPI):
 ############################################################################
 if __name__ == '__main__':
     api = MasterAPI()  #Creates object (instance of BinanceAPI class)
-    api.AnalyticsAPI.MovingAverage()
+    #api.AnalyticsAPI.MovingAverage()
     #api.AnalyticsAPI.MovingAverage()
