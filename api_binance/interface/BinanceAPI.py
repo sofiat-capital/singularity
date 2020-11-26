@@ -121,7 +121,7 @@ class BinanceAPI(BaseAPI):
     def CurrentAveragePrice(self, symbol = "BTCUSDT"):
         url = self.keychain.get('basepoint') + self._endpoints.get('currentAveragePrice')
         url += '?symbol={}'.format(symbol)
-        self.response = json.loads(requests.get(endpoint).content)
+        self.response = json.loads(requests.get(url).content)
 
         self.log(self.response)
         return self.response

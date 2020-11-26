@@ -6,22 +6,63 @@ import mysql.connector
 from mysql.connector import Error
 from mysql.connector import errorcode
 
+from sqlalchemy import create_engine
+from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.orm import Session
+from alembic.autogenerate import compare_metadata
+
+from alembic.migration import MigrationContext
+from alembic.migration import MigrationContext
+from alembic.autogenerate import compare_metadata
+from sqlalchemy.schema import SchemaItem
+from sqlalchemy.types import TypeEngine
+from sqlalchemy import (create_engine, MetaData, Column,
+        Integer, String, Table)
+import pprint
+
+import os, sys
+
+
+class SQLEngine(BaseAPI):
+    def __init__(self):
+        self.keychain = {'mysql' : os.environ.get('mysql_key')}
+
+        try:
+            url = 'mysql+pymysql://root:{}@localhost/sofiat'.format(self.keychain.get('mysql'))
+            self.engine = create_engine(url)
+
+        except:
+            self.log('Error connecting to database')
+
+        self.base = automap_base()
+        self.base.prepare(self.engine, reflect=True)
+        self.models = self.base.classes
+
+        self.log('initializing SQL Engine')
+        return
+
+
 class DataBaseAPI(BaseAPI):
     def __init__(self):
         BaseAPI.__init__(self)
+        self.log('initializing DataBaseAPI')
         self.keychain = {'mysql_key' : os.environ.get('mysql_key')}
 
 
         self.cnx = mysql.connector.connect(user='root',
                                       password=self.keychain.get('mysql_key', None),
                                       host='127.0.0.1',
-                                      database='stockportfolio',
+                                      database='sofiat',
                                       auth_plugin='mysql_native_password')
+
+        self.engine = SQLEngine()
         return
 
     ############################################################################
     ### Insert FUNCTIONS
     ############################################################################
+
+
     def InsertDayCandle(self, daycandles):
         '''Precondition: daycandles is the result of self.kline
         '''
@@ -31,6 +72,7 @@ class DataBaseAPI(BaseAPI):
             daycandles[column] = np.array(daycandles[column], dtype=float)
 
         daycandles[columns[-1]] = np.array(daycandles[column], dtype=int)
+
 
         mySql_insert_query = """INSERT INTO dayCandle (iddayCandle, fk_idproduct_dayCandle, date, low, hi, open, close, volume, numtrades)
                                VALUES
@@ -81,3 +123,20 @@ class DataBaseAPI(BaseAPI):
         result = np.array(result).flatten()[0]   # List becomes single value
         cursor.close()
         return result
+
+
+    '''
+    def InsertDayCandle_(self, daycandles):
+
+        DayCandle =
+
+        MODEL = self.engine.models.get('dayCandle')(date      = daycandles['close_time'],
+                                            low       = daycandles['low'],
+                                            hi        = daycandles['high'],
+                                            open      = daycandles['open'],
+                                            close     = daycandles['close'],
+                                            volume    = daycandles['volume'],
+                                            numtrades = daycandles['number_of_trades']
+                                          )
+        return
+    '''

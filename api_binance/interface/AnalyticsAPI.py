@@ -25,7 +25,4 @@ class AnalyticsAPI(BaseAPI):
         frame['date'] = pd.to_datetime(frame['date'], format='%m%d%Y')
         frame = frame.set_index('date')
 
-
-
-
         return frame
