@@ -51,13 +51,6 @@ class DataBaseAPI(BaseAPI):
         self.log('initializing DataBaseAPI')
         self.keychain = {'mysql_key' : os.environ.get('mysql_key')}
 
-
-        self.cnx = mysql.connector.connect(user='root',
-                                      password=self.keychain.get('mysql_key', None),
-                                      host='127.0.0.1',
-                                      database='sofiat',
-                                      auth_plugin='mysql_native_password')
-
         self.engine = SQLEngine()
 
 
@@ -66,6 +59,7 @@ class DataBaseAPI(BaseAPI):
         self.Product     = self.engine.models.get('product')
         self.DayCandle   = self.engine.models.get('dayCandle')
         self.Transaction = self.engine.models.get('transaction')
+        self.RealTime    = self.engine.models.get('realTime')
 
 
         return
@@ -80,7 +74,7 @@ class DataBaseAPI(BaseAPI):
 
         for i, candle in daycandles.iterrows():
 
-            element = self.DayCandle(fk_idproduct_dayCandle = self._get_ticker_id(candle['symbol']),
+            element = self.DayCandle(fk_idproduct_dayCandle = self._get_product_id(candle['symbol']),
                                      date   = candle['close_time'],
                                      low    = float(candle['low']),
                                      hi     = float(candle['high']),
@@ -102,7 +96,7 @@ class DataBaseAPI(BaseAPI):
     def InsertTransaction(self, input_ticker, buy_sell, price, quantity):
         session = self.engine.Session()
         timestamp = self.current_time
-        product_id = self._get_ticker_id(input_ticker)
+        product_id = self._get_product_id(input_ticker)
         if not product_id:
             self.log('No Product for {}'.format(input_ticker))
             return None
@@ -120,6 +114,28 @@ class DataBaseAPI(BaseAPI):
         session.close()
         return
 
+
+    def InsertRealTime(self, symbol, price, time = None):
+        session = self.engine.Session()
+
+        product_id = self._get_product_id(symbol)
+        if not product_id:
+            self.log("Product doesn't exist!:  {}".format(symbol))
+            return
+
+        if not time:
+            time = self.current_time
+
+        realtime = self.RealTime(
+                        fk_idproduct_realTime = product_id,
+                        observedPrice = price,
+                        observedTime  = time,
+                        )
+        session.add(realtime)
+        session.commit()
+        self.log('committed: {} - {}'.format(symbol, time))
+
+        return
 
     ############################################################################
     ### HIDDEN FUNCTIONS
@@ -139,9 +155,10 @@ class DataBaseAPI(BaseAPI):
         else:
             self.log('Category {} exists'.format(name))
 
+        session.close()
         return category
 
-        session.close()
+
 
 
     def CreateProduct(self, productName, categoryName):
@@ -165,7 +182,7 @@ class DataBaseAPI(BaseAPI):
 
 
 
-    def _get_ticker_id(self, ticker):
+    def _get_product_id(self, ticker):
         session = self.engine.Session()
 
         product = session.query(self.Product).filter(self.Product.ticker == ticker).first()
