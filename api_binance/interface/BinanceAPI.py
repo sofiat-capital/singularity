@@ -51,6 +51,8 @@ closeUserDataStream = '/api/v3/userDataStream'#DELETE
 class BinanceAPI(BaseAPI):
     def __init__(self):
         BaseAPI.__init__(self)
+        self.DataBaseAPI = DataBaseAPI()
+        
         self.keychain = {"api_key"    : os.environ.get('binance_api'),
                          "secret_api" : os.environ.get('binance_secret'),
                          "basepoint"   : "https://api.binance.com/"
@@ -92,12 +94,25 @@ class BinanceAPI(BaseAPI):
         url = self.keychain.get('basepoint') + self._endpoints.get('exchangeInfo')
         r = requests.get(url)
         self.log(r.content)
+        return r.content
 
     # ORDERBOOK ENDPOINT of BINANCE API
     def OrderBook(self, symbol, limit):
         url = self.keychain.get('basepoint') + self._endpoints.get('orderBook') + '?symbol={}&limit={}'.format(symbol, limit)
         r = requests.get(url)
         self.log(r.content)
+
+
+    def SymbolPriceTicker(self, symbol= 'BTCUSDT'):
+        self.log('SymbolPriceTicker')
+        url = self.keychain.get('basepoint') + self._endpoints.get('symbolPriceTicker') + '?symbol={}'.format(symbol)
+        self.log(url)
+        r = requests.get(url)
+        self.log(r.content)
+
+        self.response = json.loads(r.content)
+
+        return self.response
 
     # CANDLESTICK ENDPOINT of BINANCE API
     def CandleStick(self, symbol = 'BTCUSDT', interval='1h', **params):
@@ -130,12 +145,14 @@ class BinanceAPI(BaseAPI):
 ################################################################################
 # USER DEFINED
 ################################################################################
+
     # FORMATS BINANCE API TIMESTAMP INTO READABLE (D:H:M:S) FORMAT
     def time(self):
         self.response = json.loads(requests.get(endpoint).content)
         time = self.CheckServerTime()
         time = datetime.fromtimestamp(int(time)/1000)
         return self.response
+
 
     # (HIDDEN FUNCTION) LIST COMPREHENSION CONCATONATES DESCRIPTIONS TO VALUES
     def _format_kline(self, kline):
