@@ -43,6 +43,28 @@ startUserDataStream = '/api/v3/userDataStream' #POST
 keepAliveUserDataStream = '/api/v3/userDataStream' #PUT
 closeUserDataStream = '/api/v3/userDataStream'#DELETE
 
+class BinanceTraderAPI(BaseAPI):
+    def __init__(self):
+        BaseAPI.__init__(self)
+
+        self._endpoints = {
+                'newOrderTrades'     : '/api/v3/order',
+                'testNewOrder'       : '/api/v3/order/test',
+                'queryOrder'         : 'api/v3/order',
+                'cancelOrder'        : 'api/v3/order',
+                'cancelAllOrders'    : '/api/v3/openOrders',
+                'currentOpenOrders'  : '/api/v3/openOrders',
+                'allOrders'          : '/api/v3/allOrders',
+                'newOCO'             : '/api/v3/order/oco',
+                'cancelOCO'          : '/api/v3/orderList',
+                'queryOCO'           : '/api/v3/orderList',
+                'queryAllOCO'        : '/api/v3/allOrderList',
+                'queryOpenOCO'       : '/api/v3/openOrderList',
+                'accountInfo'        : '/api/v3/account',
+                'accountTradeList'   : '/api/v3/myTrades'
+                }
+
+        return
 
 
 ################################################################################
@@ -51,8 +73,8 @@ closeUserDataStream = '/api/v3/userDataStream'#DELETE
 class BinanceAPI(BaseAPI):
     def __init__(self):
         BaseAPI.__init__(self)
-        self.DataBaseAPI = DataBaseAPI()
-        
+        #self.DataBaseAPI = DataBaseAPI()
+
         self.keychain = {"api_key"    : os.environ.get('binance_api'),
                          "secret_api" : os.environ.get('binance_secret'),
                          "basepoint"   : "https://api.binance.com/"
@@ -70,8 +92,11 @@ class BinanceAPI(BaseAPI):
         'currentAveragePrice'     : 'api/v3/avgPrice',
         'dailyTickerPriceChange'  : 'api/v3/ticker/24hr',
         'symbolPriceTicker'       : 'api/v3/ticker/price',
-        'symbolOrderBookTicker'   : 'api/v3/ticker/bookTicker'
+        'symbolOrderBookTicker'   : 'api/v3/ticker/bookTicker',
         }
+
+        self.Trader = BinanceTraderAPI()
+
         return
 
     # TESTCONNECTIVITY ENDPOINT OF BINANCE API

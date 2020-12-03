@@ -43,7 +43,6 @@ class SQLEngine(BaseAPI):
         self.log('initializing SQL Engine')
         return
 
-
 #
 class DataBaseAPI(BaseAPI):
     def __init__(self):
@@ -53,14 +52,12 @@ class DataBaseAPI(BaseAPI):
 
         self.engine = SQLEngine()
 
-
         ### Models
         self.Category    = self.engine.models.get('category')
         self.Product     = self.engine.models.get('product')
         self.DayCandle   = self.engine.models.get('dayCandle')
         self.Transaction = self.engine.models.get('transaction')
         self.RealTime    = self.engine.models.get('realTime')
-
 
         return
 
@@ -159,8 +156,6 @@ class DataBaseAPI(BaseAPI):
         return category
 
 
-
-
     def CreateProduct(self, productName, categoryName):
         session = self.engine.Session()
         product = session.query(self.Product).filter(self.Product.ticker == productName).first()
@@ -181,10 +176,8 @@ class DataBaseAPI(BaseAPI):
         return product
 
 
-
     def _get_product_id(self, ticker):
         session = self.engine.Session()
-
         product = session.query(self.Product).filter(self.Product.ticker == ticker).first()
 
         if not product:
