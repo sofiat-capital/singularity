@@ -10,6 +10,7 @@ from sqlalchemy.schema import SchemaItem
 from sqlalchemy.types import TypeEngine
 from sqlalchemy import (create_engine, MetaData, Column,
         Integer, String, Table)
+from sqlalchemy.orm import sessionmaker
 import pprint
 
 import os, sys
@@ -40,5 +41,3 @@ class Engine(object):
         self.models = api.DataBaseAPI.engine.base.keys()
 
         return
-
-    def 

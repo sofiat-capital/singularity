@@ -14,7 +14,6 @@ class MasterAPI(BaseAPI):
         self.log('initializing MasterAPI')
         BaseAPI.__init__(self)
 
-
         # SoFIAT "Moules"
         self.DataBaseAPI = DataBaseAPI()
         self.BinanceAPI = BinanceAPI()
@@ -36,7 +35,7 @@ class MasterAPI(BaseAPI):
         self.log('adding job')
         self.Scheduler.add_job(self.realtime, 'interval', seconds = 1)
 
-        print(self.Scheduler.print_jobs())
+        self.log(self.Scheduler.print_jobs())
 
         self.log('running')
         self.Scheduler.start()
