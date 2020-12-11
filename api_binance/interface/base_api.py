@@ -7,9 +7,19 @@ class BaseAPI(object):
 
     @property
     def current_time(self):
+        ''' Current time in human format
+        '''
         ts = time.time()
         timestamp = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
         return timestamp
+
+    @property
+    def current_timestamp(self):
+        ''' Current time in milliseconds
+        '''
+        ts = time.time()
+        return int(ts * 1000.)
+
 
     @staticmethod
     def from_timestamp(timestamp):

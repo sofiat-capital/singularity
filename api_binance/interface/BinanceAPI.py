@@ -2,8 +2,10 @@
 from .base_api import BaseAPI
 import os
 import json
-import requests
 import pandas as pd
+import requests
+import hashlib
+import hmac
 ################################################################################
 # ENDPOINTS LIST: CAMEL CASE NOTATION
 ################################################################################
@@ -63,7 +65,6 @@ class BinanceTraderAPI(BaseAPI):
                 'accountInfo'        : '/api/v3/account',
                 'accountTradeList'   : '/api/v3/myTrades'
                 }
-
         return
 
 
@@ -77,7 +78,7 @@ class BinanceAPI(BaseAPI):
 
         self.keychain = {"api_key"    : os.environ.get('binance_api'),
                          "secret_api" : os.environ.get('binance_secret'),
-                         "basepoint"   : "https://api.binance.com/"
+                         "basepoint"   : "https://api.binance.us/"
                          }
 
         self._endpoints = {
@@ -93,6 +94,7 @@ class BinanceAPI(BaseAPI):
         'dailyTickerPriceChange'  : 'api/v3/ticker/24hr',
         'symbolPriceTicker'       : 'api/v3/ticker/price',
         'symbolOrderBookTicker'   : 'api/v3/ticker/bookTicker',
+        'testNewOrder'            : 'api/v3/order/test',
         }
 
         self.Trader = BinanceTraderAPI()
@@ -112,7 +114,7 @@ class BinanceAPI(BaseAPI):
         url = self.keychain.get('basepoint') + self._endpoints.get('checkServerTime')
         r = requests.get(url)
         self.log(r.content)
-        return r.content
+        return json.reads(r.content)
 
     # EXCHANGEINFO ENDPOINT of BINANCE API
     def ExchangeInfo(self):
@@ -145,17 +147,19 @@ class BinanceAPI(BaseAPI):
         '''
 
         url = self.keychain.get('basepoint') + self._endpoints.get('candleStick')
-        url += '?symbol={}&interval={}'.format(symbol,interval)
+        body = '?symbol={}&interval={}'.format(symbol,interval)
 
         if params:
-            url += '&' + '&'.join(f'{key}={value}' for key, value in params.items())
+            body += '&' + '&'.join(f'{key}={value}' for key, value in params.items())
 
+        url += body
         self.log(url)
         self.response = json.loads(requests.get(url).content)
 
         frame = pd.DataFrame([self._format_kline(kline) for kline in self.response])
         frame['symbol'] = [symbol] * len(frame)
         return frame
+
 
     # CURRENTAVERAGE ENDPOINT of BINANCE API
     def CurrentAveragePrice(self, symbol = "BTCUSDT"):
@@ -167,9 +171,63 @@ class BinanceAPI(BaseAPI):
         return self.response
 
 
+    # TEST HASHED ORDER IN BINANCE API
+    def TestNewOrder(self, **params):
+        # Hit TestNewOrder endpoint
+        session = requests.Session()
+
+        url = self.keychain.get('basepoint') + self._endpoints.get('testNewOrder')
+
+        # Add hash signature to params payload
+        params.update(self.gen_authenticator(params))
+        headers = self.gen_headers()
+        body = self.gen_payload(params)
+
+        session.headers.update(headers)
+        # ? symbol separates the endpoint (page) from encoded information
+        url += '?' + body
+        self.log(url)
+        self.log("Sending Order Request - {} ".format(params))
+        #self.response = requests.post(url, headers).content
+        self.response = session.post(url).content
+        self.log(self.response)
+        return
+
+
 ################################################################################
 # USER DEFINED
 ################################################################################
+    # CONCATONATES PAYLOAD (BINANCE API PARAMETERS)
+    @staticmethod
+    def gen_payload(params):
+        return '&'.join(f'{key}={value}' for key, value in params.items())
+
+    # ENCODES ALL PASSED TO UTF-8
+    @staticmethod
+    def encode(body, encoding = 'utf-8'):
+        return bytes(body, encoding=encoding)
+
+    def gen_headers(self):
+        return {'Content-Type' : 'application/x-www-form-urlencoded',
+                'X-MBX-APIKEY' : self.keychain.get('api_key')}
+
+
+
+    # CREATE HASHED MESSAGE TO SEND TO BINANCE API
+    def gen_authenticator(self, params):
+        self.log("Authenticating... ")
+        # format params to payload
+        payload = self.gen_payload(params)
+
+        # Encoding of secret and payload
+        byte_secret = self.encode(self.keychain.get("secret_api"))
+        byte_payload = self.encode(payload)
+
+        # Creates hash object with (secret, payload)
+        hasher = hmac.new(byte_secret, byte_payload, digestmod='sha256')
+
+        # Hash entire message (SecretKey, Payload)
+        return {'signature' : hasher.hexdigest()}
 
     # FORMATS BINANCE API TIMESTAMP INTO READABLE (D:H:M:S) FORMAT
     def time(self):

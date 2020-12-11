@@ -55,6 +55,14 @@ class MasterAPI(BaseAPI):
 if __name__ == '__main__':
     api = MasterAPI()  #Creates object (instance of BinanceAPI class)
 #    api.run()
+    TEST_API_ORDER = {
+        'symbol'     : 'BTCUSDT',
+        'side'       : 'BUY',
+        'type'       : 'MARKET',
+        'quantity'   : 1,
+        'recvWindow' : 5000,
+        'timestamp'  : api.current_timestamp
+        }
 
     TEST_ORDER = {
     "symbol"                   : "BTCUSDT",
@@ -124,6 +132,5 @@ if __name__ == '__main__':
     ORDER_RESPONSE['idbinanceOrder'] = 1
 
 
-
-    api.DataBaseAPI.InsertBinanceOrder(TEST_ORDER)
-    api.DataBaseAPI.InsertBinanceFills(ORDER_RESPONSE)
+    #api.DataBaseAPI.InsertBinanceOrder(TEST_ORDER)
+    #api.DataBaseAPI.InsertBinanceFills(ORDER_RESPONSE)
