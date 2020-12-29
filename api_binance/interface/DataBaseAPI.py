@@ -75,7 +75,7 @@ class DataBaseAPI(BaseAPI):
                                      open   = float(candle['open']),
                                      close  = float(candle['close']),
                                      volume = float(candle['volume']),
-                                     numtrades = int(candle['number_of_trades'])
+                                     numTrades = int(candle['number_of_trades'])
                                    )
             session.add(element)
 
