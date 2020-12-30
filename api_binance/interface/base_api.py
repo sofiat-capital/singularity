@@ -1,4 +1,5 @@
 # USED FOR COMMON METHODS IN BINANCE API HELPER CLASSES
+import os
 import time
 from datetime import datetime
 
@@ -9,8 +10,22 @@ class BaseAPI(object):
         return
 
     def intro(self):
+        self.clear()
         f = Figlet(font='slant')
-        print(f.renderText('SoFiat'))
+        self.span_window()
+        print(f.renderText('SoFIAT'))
+        self.span_window()
+        print('Authors:  Devin Whitten | Austin Stockwell')
+        print('Email:    dev.sofiat@gmail.com')
+        self.span_window()
+        return
+
+    def span_window(self, symbol = '-'):
+        print(symbol * os.get_terminal_size().columns)
+        return
+
+    def clear(self):
+        os.system("clear")
         return
 
     @property
@@ -34,6 +49,11 @@ class BaseAPI(object):
         return datetime.fromtimestamp(int(timestamp)/1000).strftime('%Y-%m-%d %H:%M:%S')
 
 
-    def log(self, msg=""):
-        print('{} - {}: {}'.format(self.current_time, self.__class__.__name__, msg))
+    def log(self, msg="", flush=False):
+        output = '{} - {}: {}'.format(self.current_time, self.__class__.__name__, msg)
+        if flush:
+            print(output, end='\r')
+            #sys.stdout.flush()
+        else:
+            print(output)
         return
