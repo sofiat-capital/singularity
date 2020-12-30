@@ -1,8 +1,16 @@
 # USED FOR COMMON METHODS IN BINANCE API HELPER CLASSES
 import time
 from datetime import datetime
+
+from pyfiglet import Figlet
+
 class BaseAPI(object):
     def __init__(self):
+        return
+
+    def intro(self):
+        f = Figlet(font='slant')
+        print(f.renderText('SoFiat'))
         return
 
     @property
