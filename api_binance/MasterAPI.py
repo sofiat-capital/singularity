@@ -13,7 +13,7 @@ class MasterAPI(BaseAPI):
     def __init__(self):
         self.log('initializing MasterAPI')
         BaseAPI.__init__(self)
-
+        self.intro()
         # SoFIAT "Moules"
         self.DataBaseAPI = DataBaseAPI()
         self.BinanceAPI = BinanceAPI()
@@ -25,6 +25,7 @@ class MasterAPI(BaseAPI):
     def test(self):
         self.log('test')
         return
+
 
     def run(self):
         # Python
@@ -49,7 +50,7 @@ class MasterAPI(BaseAPI):
         self.DataBaseAPI.InsertRealTime(symbol = 'BTCUSDT',
                                         price = self.BinanceAPI.response.get('price'))
 
-##################ñ##########################################################
+############################################################################
 #MAIN CODE MAIN CODE MAIN CODE MAIN
 ############################################################################
 if __name__ == '__main__':
