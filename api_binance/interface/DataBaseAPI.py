@@ -103,7 +103,7 @@ class DataBaseAPI(BaseAPI):
                         )
         session.add(realtime)
         session.commit()
-        self.log('committed: {} - {}'.format(symbol, time))
+        #self.log('committed: {} - {}'.format(symbol, time))
         return True
 
     # ENTERS DATA INTO BINANCEORDER TABLE

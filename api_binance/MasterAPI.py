@@ -11,9 +11,9 @@ from interface.AnalyticsAPI import AnalyticsAPI
 
 class MasterAPI(BaseAPI):
     def __init__(self):
-        self.log('initializing MasterAPI')
         BaseAPI.__init__(self)
         self.intro()
+        self.log('initializing MasterAPI')
         # SoFIAT "Moules"
         self.DataBaseAPI = DataBaseAPI()
         self.BinanceAPI = BinanceAPI()
@@ -33,12 +33,12 @@ class MasterAPI(BaseAPI):
         self.Scheduler = BlockingScheduler()
 
         #######
-        self.log('adding job')
-        self.Scheduler.add_job(self.realtime, 'interval', seconds = 1)
+        #self.log('adding job')
+        self.Scheduler.add_job(self.realtime, 'interval', seconds = 20)
 
-        self.log(self.Scheduler.print_jobs())
-
-        self.log('running')
+        #self.log(self.Scheduler.print_jobs())
+        self.span_window()
+        self.log('Status: Running')
         self.Scheduler.start()
 
     ############################################################################
@@ -47,6 +47,7 @@ class MasterAPI(BaseAPI):
     def realtime(self, **params):
 
         self.BinanceAPI.SymbolPriceTicker(symbol = 'BTCUSDT')
+        self.log('BTCUSDT : {}'.format(self.BinanceAPI.response.get('price')), flush=True)
         self.DataBaseAPI.InsertRealTime(symbol = 'BTCUSDT',
                                         price = self.BinanceAPI.response.get('price'))
 

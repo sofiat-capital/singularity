@@ -131,12 +131,11 @@ class BinanceAPI(BaseAPI):
 
 
     def SymbolPriceTicker(self, symbol= 'BTCUSDT'):
-        self.log('SymbolPriceTicker')
+        #self.log('SymbolPriceTicker')
         url = self.keychain.get('basepoint') + self._endpoints.get('symbolPriceTicker') + '?symbol={}'.format(symbol)
-        self.log(url)
+        #self.log(url)
         r = requests.get(url)
-        self.log(r.content)
-
+        #self.log(r.content)
         self.response = json.loads(r.content)
 
         return self.response
