@@ -49,6 +49,7 @@ class BaseAPI(object):
         return datetime.fromtimestamp(int(timestamp)/1000).strftime('%Y-%m-%d %H:%M:%S')
 
 
+
     def log(self, msg="", flush=False):
         output = '{} - {}: {}'.format(self.current_time, self.__class__.__name__, msg)
         if flush:
