@@ -1,6 +1,6 @@
 import os
 import numpy as np
-from base_api import BaseAPI
+from .base import BaseAPI
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.automap import automap_base
