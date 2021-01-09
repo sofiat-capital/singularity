@@ -2,8 +2,8 @@
 import os
 import time
 from datetime import datetime
-
 from pyfiglet import Figlet
+
 
 class BaseAPI(object):
     def __init__(self):
