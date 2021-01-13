@@ -48,6 +48,13 @@ class BaseAPI(object):
     def from_timestamp(timestamp):
         return datetime.fromtimestamp(int(timestamp)/1000).strftime('%Y-%m-%d %H:%M:%S')
 
+    @staticmethod
+    def to_timestamp(input_date):
+        '''YYYY-MM-DD'''
+        line = input_date.split('-')
+        date = datetime(year=int(line[0]), month=int(line[1]), day=int(line[2]))
+        return date.timestamp()
+
 
 
     def log(self, msg="", flush=False):

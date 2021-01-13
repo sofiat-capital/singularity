@@ -38,20 +38,23 @@ class DataBaseAPI(BaseAPI):
     """API for SoFIAT MySQL Database"""
     def __init__(self):
         """Constructor for DatabaseAPI Class"""
-        BaseAPI.__init__(self)
+        super().__init__()
         self.log('initializing DataBaseAPI')
         self.keychain = {'mysql_key' : os.environ.get('mysql_key')}
         self.engine = SQLEngine()
-        ### Models
-        self.Category    = self.engine.models.get('category')
-        self.Product     = self.engine.models.get('product')
-        self.DayCandle   = self.engine.models.get('dayCandle')
-        self.Transaction = self.engine.models.get('transaction')
-        self.RealTime    = self.engine.models.get('realTime')
+
+        ### SQL Alchemy Models
+        self.Category     = self.engine.models.get('category')
+        self.Product      = self.engine.models.get('product')
+        self.DayCandle    = self.engine.models.get('dayCandle')
+        self.Transaction  = self.engine.models.get('transaction')
+        self.RealTime     = self.engine.models.get('realTime')
         self.BinanceOrder = self.engine.models.get('binanceOrder')
         self.BinanceFill  = self.engine.models.get('binanceFill')
+        self.OrderQueue   = self.engine.models.get('orderQueue')
         return
 
+################################################################################
     ############################################################################
     ### Insert FUNCTIONS
     ############################################################################
@@ -143,9 +146,31 @@ class DataBaseAPI(BaseAPI):
             )
         session.commit()
         self.log('committed: Binance Order Fills: {}'.format(binance_order.idbinanceOrder))
-        return True
+        return
 
-################################################################################
+    def InsertOrderQueue(self, params):
+        """INSERT into OrderQueue table of SoFIAT Database"""
+        session =  self.engine.Session()
+        #Allows passing of TICKER symbol
+        product_id = self._get_product_id(params.get('symbol'))
+        #Creating table object
+        order_queue = self.OrderQueue(
+            fk_idproduct_orderQueue = product_id,
+            side                    =  params.get('side'),
+            timestamp               = self.current_time,
+            price                   = params.get('price'),
+            quantity                = params.get('quantity'),
+            filled                  = False
+            )
+        #Adds table to SQL Session & commit
+        session.add(order_queue)
+        session.commit()
+        self.log('Committing OrderQueue')
+        return
+
+    ############################################################################
+    ### CREATE STATEMENTS
+    ############################################################################
     def CreateCategory(self, name):
         """INSERT into Category table of SoFIAT Database"""
         session = self.engine.Session()
@@ -177,19 +202,16 @@ class DataBaseAPI(BaseAPI):
         return product
 
     ############################################################################
-    ### Accessors (SELECT)
+    ### SELECT STATEMENTS (Accessors)
     ############################################################################
-    def getDayCandleFrame(self, symbol='ETHUSDT', columns = None):
+    def GetDayCandleFrame(self, symbol='ETHUSDT', columns = None):
         """SELECT from DayCandles table of SoFIAT Database"""
         #IF columns isn't provided in param list, return all columns in table
-
         columns = ['date','open', 'hi', 'low', 'close', 'volume', 'numTrades']
-
         session =  self.engine.Session()
         product_id = self._get_product_id(ticker = symbol)
         day_candles = session.query(self.DayCandle).filter(
                             self.DayCandle.fk_idproduct_dayCandle == product_id).all()
-
         reformat = []
         for candle in list(set(day_candles)):
             reformat.append([candle.date,
@@ -199,16 +221,34 @@ class DataBaseAPI(BaseAPI):
                              candle.close,
                              candle.volume,
                              candle.numTrades])
-
         frame = pd.DataFrame(data = reformat,
                              columns = columns)
-
         frame['date'] = pd.to_datetime(frame['date'], format='%Y-%m-%d')
         frame = frame.set_index('date').sort_index()
-
         return frame
 
+    def GetOrderQueue(self, filled=None):
+        """ BinanceMaster.py utilizes to pass orders to Binance Endpoint  """
+        session =  self.engine.Session()
+        #columns = ['1','2']
+        #Creates SELECT statement in SQLAlchemy (Primarily for testing???)
+        if filled is None:
+            order_queue = session.query(self.OrderQueue).order_by(
+                    self.OrderQueue.timestamp.asc()).all()
+        else:
+            order_queue = session.query(self.OrderQueue).filter(
+                    self.OrderQueue.filled == filled
+                    ).order_by(self.OrderQueue.timestamp.asc()).all()
+        return order_queue if order_queue else None
 
+    def GetRealTime(self, symbol='ETHUSDT'):
+        """SELECT from RealTime table of SoFIAT Database"""
+        session =  self.engine.Session()
+        product_id = self._get_product_id(symbol)
+        realtime = session.query(self.RealTime).filter(
+                            self.RealTime.fk_idproduct_realTime == product_id).order_by(
+                            self.RealTime.observedTime).all()
+        return realtime
 
     def _get_product_id(self, ticker):
         """Helper function -- Returns Product ID when given Ticker Symbol"""
