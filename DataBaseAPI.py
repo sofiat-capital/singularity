@@ -24,6 +24,7 @@ import os, sys
 # CREATES SQL ENGINE (CONNECTION) TO DATABASE WITH SQLALCHEMY
 class SQLEngine(BaseAPI):
     def __init__(self):
+        super().__init__()
         self.keychain = {'mysql' : os.environ.get('mysql_key')}
         try:
             url = 'mysql+pymysql://root:{}@localhost/sofiat'.format(self.keychain.get('mysql'))
@@ -45,19 +46,19 @@ class SQLEngine(BaseAPI):
 # DATABASE API
 class DataBaseAPI(BaseAPI):
     def __init__(self):
-        BaseAPI.__init__(self)
+        super().__init__()
         self.log('initializing DataBaseAPI')
         self.keychain = {'mysql_key' : os.environ.get('mysql_key')}
         self.engine = SQLEngine()
 
         ### Models
-        self.Category    = self.engine.models.get('category')
-        self.Product     = self.engine.models.get('product')
-        self.DayCandle   = self.engine.models.get('dayCandle')
-        self.Transaction = self.engine.models.get('transaction')
-        self.RealTime    = self.engine.models.get('realTime')
-        self.BinanceOrder = self.engine.models.get('binanceOrder')
-        self.BinanceFill  = self.engine.models.get('binanceFill')
+        self.Category     =  self.engine.models.get('category')
+        self.Product      =  self.engine.models.get('product')
+        self.DayCandle    =  self.engine.models.get('dayCandle')
+        self.Transaction  =  self.engine.models.get('transaction')
+        self.RealTime     =  self.engine.models.get('realTime')
+        self.BinanceOrder =  self.engine.models.get('binanceOrder')
+        self.BinanceFill  =  self.engine.models.get('binanceFill')
         return
 
     ############################################################################
@@ -106,27 +107,32 @@ class DataBaseAPI(BaseAPI):
         #self.log('committed: {} - {}'.format(symbol, time))
         return True
 
-    # ENTERS DATA INTO BINANCEORDER TABLE
+
     def InsertBinanceOrder(self, params):
+        """INSERT order from successful Binance order payload"""
         session =  self.engine.Session()
         product_id = self._get_product_id(params.get('symbol'))
 
         if not product_id:
-            self.log("Product doesn't exist!:  {}".format(symbol))
-            return
+            self.log("Product doesn't exist! Creating Product for:  {}".format(symbol))
+            self.CreateProduct(productName = symbol, categoryName = 'cryptocoin')
+            self.log('Created product for {}'.format(symbol))
+            product_id = self._get_product_id(params.get('symbol'))
 
-        binance_order = session.query(self.BinanceOrder).filter(self.BinanceOrder.idbinanceOrder == params.get('idbinanceOrder')).first()
-
+        '''
+        binance_order = session.query(self.BinanceOrder).filter(
+                                self.BinanceOrder.idbinanceOrder == params.get('orderId')).first()
         if binance_order:
             self.log('Binance Order exists:  {}'.format(params.get('idbinanceOrder')))
             return False
+        '''
 
         binance_order = self.BinanceOrder(
-                            idbinanceOrder             = params.get('idbinanceOrder'),
+                            idbinanceOrder             = params.get('orderId'),
                             fk_idproduct_binanceOrder  = product_id,
                             orderListId                = params.get('orderListId'),
                             clientOrderId              = params.get('clientOrderId'),
-                            transactTime               = params.get('transactTime'),
+                            transactTime               = self.from_timestamp(params.get('transactTime')),
                             price                      = params.get('price'),
                             origQty                    = params.get('origQty'),
                             executedQty                = params.get('executedQty'),
@@ -143,16 +149,17 @@ class DataBaseAPI(BaseAPI):
         return True
 
     def InsertBinanceFills(self, params):
+        """INSERT fills from successful Binance order payload"""
         session =  self.engine.Session()
 
         idbinanceOrder = params.get('orderId')
-        binance_order = session.query(self.BinanceOrder).filter(self.BinanceOrder.idbinanceOrder == idbinanceOrder).first()
+        binance_order = session.query(self.BinanceOrder).filter(
+                    self.BinanceOrder.idbinanceOrder == idbinanceOrder).one_or_none()
 
         if not binance_order:
             self.log('order {} does not exist!'.format(idbinanceOrder))
 
         fills = params.get('fills')
-
 
         for current_fill in fills:
             session.add(self.BinanceFill(
@@ -167,10 +174,7 @@ class DataBaseAPI(BaseAPI):
         session.commit()
         self.log('committed: Binance Order Fills: {}'.format(binance_order.idbinanceOrder))
 
-
         return True
-
-
 
 
     ############################################################################
