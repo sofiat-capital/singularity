@@ -1,12 +1,17 @@
 # USED FOR COMMON METHODS IN BINANCE API HELPER CLASSES
-import os
+import os, sys
 import time
+from .skype import SkypeBot
 from datetime import datetime
 from pyfiglet import Figlet
 
 
 class BaseAPI(object):
-    def __init__(self):
+    def __init__(self, to_skype = False):
+        if to_skype:
+            self.skype = SkypeBot()
+        else:
+            self.skype = None
         return
 
     def intro(self):
@@ -29,14 +34,6 @@ class BaseAPI(object):
         return
 
     @property
-    def current_time(self):
-        ''' Current time in human format
-        '''
-        ts = time.time()
-        timestamp = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
-        return timestamp
-
-    @property
     def current_timestamp(self):
         ''' Current time in milliseconds
         '''
@@ -57,11 +54,22 @@ class BaseAPI(object):
 
 
 
-    def log(self, msg="", flush=False):
+    @property
+    def current_time(self):
+        ''' Current time in human format
+        '''
+        ts = time.time()
+        timestamp = datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+        return timestamp
+
+
+    def log(self, msg="", flush=False, to_slack=False):
         output = '{} - {}: {}'.format(self.current_time, self.__class__.__name__, msg)
         if flush:
             print(output, end='\r')
             #sys.stdout.flush()
         else:
             print(output)
+        if self.skype and to_slack:
+            self.skype.send(output)
         return

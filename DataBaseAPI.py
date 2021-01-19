@@ -18,7 +18,7 @@ from .base import BaseAPI
 class SQLEngine(BaseAPI):
     """Creates SQLEngine (Connection) to Database w/SQLALCHEMY"""
     def __init__(self):
-        """Constructor for SQLEngineClass"""
+        super().__init__()
         self.keychain = {'mysql' : os.environ.get('mysql_key')}
         try:
             url = 'mysql+pymysql://root:{}@localhost/sofiat'.format(self.keychain.get('mysql'))
@@ -37,7 +37,6 @@ class SQLEngine(BaseAPI):
 class DataBaseAPI(BaseAPI):
     """API for SoFIAT MySQL Database"""
     def __init__(self):
-        """Constructor for DatabaseAPI Class"""
         super().__init__()
         self.log('initializing DataBaseAPI')
         self.keychain = {'mysql_key' : os.environ.get('mysql_key')}
@@ -96,23 +95,31 @@ class DataBaseAPI(BaseAPI):
         #self.log('committed: {} - {}'.format(symbol, time))
         return True
 
+
     def InsertBinanceOrder(self, params):
-        """INSERT into BinanceOrder table of SoFIAT Database"""
+        """INSERT order from successful Binance order payload"""
         session =  self.engine.Session()
         product_id = self._get_product_id(params.get('symbol'))
         if not product_id:
-            self.log("Product doesn't exist!:  {}".format(symbol))
-            return
-        binance_order = session.query(self.BinanceOrder).filter(self.BinanceOrder.idbinanceOrder == params.get('idbinanceOrder')).first()
+            self.log("Product doesn't exist! Creating Product for:  {}".format(symbol))
+            self.CreateProduct(productName = symbol, categoryName = 'cryptocoin')
+            self.log('Created product for {}'.format(symbol))
+            product_id = self._get_product_id(params.get('symbol'))
+
+        '''
+        binance_order = session.query(self.BinanceOrder).filter(
+                                self.BinanceOrder.idbinanceOrder == params.get('orderId')).first()
         if binance_order:
             self.log('Binance Order exists:  {}'.format(params.get('idbinanceOrder')))
             return False
+        '''
+
         binance_order = self.BinanceOrder(
-                            idbinanceOrder             = params.get('idbinanceOrder'),
+                            idbinanceOrder             = params.get('orderId'),
                             fk_idproduct_binanceOrder  = product_id,
                             orderListId                = params.get('orderListId'),
                             clientOrderId              = params.get('clientOrderId'),
-                            transactTime               = params.get('transactTime'),
+                            transactTime               = self.from_timestamp(params.get('transactTime')),
                             price                      = params.get('price'),
                             origQty                    = params.get('origQty'),
                             executedQty                = params.get('executedQty'),
@@ -128,13 +135,16 @@ class DataBaseAPI(BaseAPI):
         return True
 
     def InsertBinanceFills(self, params):
-        """INSERT into BinanceFills table of SoFIAT Database"""
+        """INSERT fills from successful Binance order payload"""
         session =  self.engine.Session()
         idbinanceOrder = params.get('orderId')
-        binance_order = session.query(self.BinanceOrder).filter(self.BinanceOrder.idbinanceOrder == idbinanceOrder).first()
+        binance_order = session.query(self.BinanceOrder).filter(
+                    self.BinanceOrder.idbinanceOrder == idbinanceOrder).one_or_none()
+
         if not binance_order:
             self.log('order {} does not exist!'.format(idbinanceOrder))
         fills = params.get('fills')
+
         for current_fill in fills:
             session.add(self.BinanceFill(
                                 fk_idbinanceorder_binanceFill = idbinanceOrder,
@@ -146,27 +156,9 @@ class DataBaseAPI(BaseAPI):
             )
         session.commit()
         self.log('committed: Binance Order Fills: {}'.format(binance_order.idbinanceOrder))
-        return
 
-    def InsertOrderQueue(self, params):
-        """INSERT into OrderQueue table of SoFIAT Database"""
-        session =  self.engine.Session()
-        #Allows passing of TICKER symbol
-        product_id = self._get_product_id(params.get('symbol'))
-        #Creating table object
-        order_queue = self.OrderQueue(
-            fk_idproduct_orderQueue = product_id,
-            side                    =  params.get('side'),
-            timestamp               = self.current_time,
-            price                   = params.get('price'),
-            quantity                = params.get('quantity'),
-            filled                  = False
-            )
-        #Adds table to SQL Session & commit
-        session.add(order_queue)
-        session.commit()
-        self.log('Committing OrderQueue')
-        return
+        return True
+
 
     ############################################################################
     ### CREATE STATEMENTS
