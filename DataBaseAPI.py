@@ -233,12 +233,21 @@ class DataBaseAPI(BaseAPI):
                     ).order_by(self.OrderQueue.timestamp.asc()).all()
         return order_queue if order_queue else None
 
-    def GetRealTime(self, symbol='ETHUSDT'):
+    def GetRealTime(self, start_time, end_time = None, symbol='ETHUSDT'):
+        """PRECONDITION: (Start TIMESTAMPOBJ, End TIMESTAMP OBJ, Symbol)"""
         """SELECT from RealTime table of SoFIAT Database"""
         session =  self.engine.Session()
         product_id = self._get_product_id(symbol)
+
+        #If no max_date is provided, assume CURRENT is max_date
+        if end_time is None:
+            end_time = self.current_time
+
+        #SELECT a window from RealTime table
         realtime = session.query(self.RealTime).filter(
-                            self.RealTime.fk_idproduct_realTime == product_id).order_by(
+                            self.RealTime.fk_idproduct_realTime == product_id,
+                            self.RealTime.observedTime.between(start_time, end_time)
+                            ).order_by(
                             self.RealTime.observedTime).all()
         return realtime
 
