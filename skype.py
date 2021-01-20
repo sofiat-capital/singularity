@@ -31,4 +31,4 @@ class SkypeBot(object):
         return timestamp
 
     def send(self, msg):
-        self.ch.sendMsg('{} : {}'.format(self.current_time, msg))
+        self.ch.sendMsg('{}'.format(msg))
