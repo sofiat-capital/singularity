@@ -8,13 +8,8 @@ from pyfiglet import Figlet
 
 
 class BaseAPI(object):
-    def __init__(self, to_skype = False):
-        if to_skype:
-            self.skype = SkypeBot()
-            pass
-        else:
-            self.skype = None
-        return
+    def __init__(self):
+        self.skype = None
 
     def intro(self):
         self.clear()
@@ -47,7 +42,7 @@ class BaseAPI(object):
     def from_timestamp(timestamp):
         ''' CONVERTS "BINANCE FORMAT (NO DECIMAL IN msecs to MACHINE CODE))'''
         ''' INPUT: 1611106199607 -->  1611106199.60748'''
-        return datetime.fromtimestamp(int(timestamp)/1000).strftime('%Y-%m-%d %H:%M:%S')
+        return datetime.fromtimestamp(int(timestamp)).strftime('%Y-%m-%d %H:%M:%S')
 
 
     @staticmethod
@@ -69,6 +64,7 @@ class BaseAPI(object):
         return timestamp
 
 
+
     def log(self, msg="", flush=False, to_skype=False):
         output = '{} - {}: {}'.format(self.current_time, self.__class__.__name__, msg)
         if flush:
@@ -78,4 +74,5 @@ class BaseAPI(object):
             print(output)
         if self.skype and to_skype:
             self.skype.send(output)
+            pass
         return
