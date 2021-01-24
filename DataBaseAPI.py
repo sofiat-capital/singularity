@@ -244,11 +244,13 @@ class DataBaseAPI(BaseAPI):
             end_time = self.current_time
 
         #SELECT a window from RealTime table
+        session.flush(self.RealTime)
         realtime = session.query(self.RealTime).filter(
                             self.RealTime.fk_idproduct_realTime == product_id,
                             self.RealTime.observedTime.between(start_time, end_time)
                             ).order_by(
                             self.RealTime.observedTime).all()
+
         return realtime
 
     def _get_product_id(self, ticker):
@@ -259,4 +261,5 @@ class DataBaseAPI(BaseAPI):
             self.log("Product {} doesn't exist".format(ticker))
             return None
         session.close()
+
         return product.idproduct
