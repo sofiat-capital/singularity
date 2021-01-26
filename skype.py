@@ -32,3 +32,7 @@ class SkypeBot(object):
 
     def send(self, msg):
         self.ch.sendMsg('{}'.format(msg))
+
+
+if __name__ == "__main__":
+    skypeboy = SkypeBot()
