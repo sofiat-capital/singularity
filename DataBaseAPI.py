@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy import (create_engine, MetaData, Column,
         Integer, String, Table)
+from datetime import datetime
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
@@ -95,6 +96,29 @@ class DataBaseAPI(BaseAPI):
         #self.log('committed: {} - {}'.format(symbol, time))
         return True
 
+    def InsertOrderQueue(self, **params):
+        """INSERT order queue entry from BUY/SELL signal"""
+        session = self.engine.Session()
+        product_id = self._get_product_id(params.get('symbol'))
+
+
+
+        order = self.OrderQueue(fk_idproduct_orderQueue = product_id,
+                                      side        = params['side'],
+                                      timeCreated = params.get('timeCreated', datetime.now()),
+                                      price       = params.get('price', None),
+                                      quantity    = params.get('quantity', None),
+                                      timeFilled  = params.get('timeFilled', None)
+                                      )
+
+        session.add(order)
+        session.commit()
+        self.log(f'committed: Order {params.get("symbol")} - {params.get("side")} to OrderQueue')
+        session.close()
+        return True
+
+
+
 
     def InsertBinanceOrder(self, params):
         """INSERT order from successful Binance order payload"""
@@ -132,6 +156,7 @@ class DataBaseAPI(BaseAPI):
         session.add(binance_order)
         session.commit()
         self.log('committed: Binance Order {} - {}'.format(binance_order.idbinanceOrder, binance_order.status))
+        session.close()
         return True
 
     def InsertBinanceFills(self, params):
