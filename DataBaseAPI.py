@@ -2,9 +2,10 @@
 import os, sys
 import numpy as np
 import pandas as pd
+import datetime
 from sqlalchemy import (create_engine, MetaData, Column,
         Integer, String, Table)
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
@@ -35,6 +36,7 @@ class SQLEngine(BaseAPI):
         self.log('Initializing SQL Engine')
         return
 
+
 class DataBaseAPI(BaseAPI):
     """API for SoFIAT MySQL Database"""
     def __init__(self):
@@ -53,6 +55,7 @@ class DataBaseAPI(BaseAPI):
         self.BinanceFill  = self.engine.models.get('binanceFill')
         self.OrderQueue   = self.engine.models.get('orderQueue')
         return
+
 
 ################################################################################
     ############################################################################
@@ -77,6 +80,7 @@ class DataBaseAPI(BaseAPI):
         session.close()
         return
 
+
     def InsertRealTime(self, symbol, price, time = None):
         """INSERT into RealTime table of SoFIAT Database"""
         session = self.engine.Session()
@@ -96,12 +100,11 @@ class DataBaseAPI(BaseAPI):
         #self.log('committed: {} - {}'.format(symbol, time))
         return True
 
+
     def InsertOrderQueue(self, **params):
         """INSERT order queue entry from BUY/SELL signal"""
         session = self.engine.Session()
         product_id = self._get_product_id(params.get('symbol'))
-
-
 
         order = self.OrderQueue(fk_idproduct_orderQueue = product_id,
                                       side        = params['side'],
@@ -116,8 +119,6 @@ class DataBaseAPI(BaseAPI):
         self.log(f'committed: Order {params.get("symbol")} - {params.get("side")} to OrderQueue')
         session.close()
         return True
-
-
 
 
     def InsertBinanceOrder(self, params):
@@ -159,6 +160,7 @@ class DataBaseAPI(BaseAPI):
         session.close()
         return True
 
+
     def InsertBinanceFills(self, params):
         """INSERT fills from successful Binance order payload"""
         session =  self.engine.Session()
@@ -181,7 +183,6 @@ class DataBaseAPI(BaseAPI):
             )
         session.commit()
         self.log('committed: Binance Order Fills: {}'.format(binance_order.idbinanceOrder))
-
         return True
 
 
@@ -202,6 +203,7 @@ class DataBaseAPI(BaseAPI):
         session.close()
         return category
 
+
     def CreateProduct(self, productName, categoryName):
         """INSERT into Product table of SoFIAT Database"""
         session = self.engine.Session()
@@ -217,6 +219,7 @@ class DataBaseAPI(BaseAPI):
             self.log('Product {} exists'.format(product))
         session.close()
         return product
+
 
     ############################################################################
     ### SELECT STATEMENTS (Accessors)
@@ -244,19 +247,19 @@ class DataBaseAPI(BaseAPI):
         frame = frame.set_index('date').sort_index()
         return frame
 
-    def GetOrderQueue(self, filled=None):
-        """ BinanceMaster.py utilizes to pass orders to Binance Endpoint  """
-        session =  self.engine.Session()
-        #columns = ['1','2']
-        #Creates SELECT statement in SQLAlchemy (Primarily for testing???)
-        if filled is None:
-            order_queue = session.query(self.OrderQueue).order_by(
-                    self.OrderQueue.timestamp.asc()).all()
-        else:
-            order_queue = session.query(self.OrderQueue).filter(
-                    self.OrderQueue.filled == filled
-                    ).order_by(self.OrderQueue.timestamp.asc()).all()
-        return order_queue if order_queue else None
+
+    def GetPendingOrderQueue(self, delta):
+        """SELECT newest UNFILLED OrderQueue row within a defined time delta"""
+        session = self.engine.Session()
+        delta = timedelta(seconds=delta)
+        order = session.query(self.OrderQueue).filter(self.OrderQueue.timeFilled == None
+                                        ).order_by(self.OrderQueue.timeCreated.desc()).first()
+        if (datetime.now() - order.timeCreated > delta) or order is None:
+            ####   stale order condition
+            return None
+        return order
+
+
 
     def GetRealTime(self, start_time, end_time = None, symbol='ETHUSDT'):
         """PRECONDITION: (Start TIMESTAMPOBJ, End TIMESTAMP OBJ, Symbol)"""
@@ -275,7 +278,6 @@ class DataBaseAPI(BaseAPI):
                             self.RealTime.observedTime.between(start_time, end_time)
                             ).order_by(
                             self.RealTime.observedTime).all()
-
         return realtime
 
     def _get_product_id(self, ticker):
@@ -286,5 +288,27 @@ class DataBaseAPI(BaseAPI):
             self.log("Product {} doesn't exist".format(ticker))
             return None
         session.close()
-
         return product.idproduct
+
+
+
+
+
+################################################################################
+    '''
+    def GetOrderQueue(self):
+        """ BinanceMaster.py utilizes to pass orders to Binance Endpoint  """
+        session =  self.engine.Session()
+        #columns = ['1','2']
+
+        #Creates SELECT statement in SQLAlchemy (Primarily for testing???)
+        if filled is None:
+            order_queue = session.query(self.OrderQueue).order_by(
+                    self.OrderQueue.timestamp.asc()).all()
+        else:
+            order_queue = session.query(self.OrderQueue).filter(
+                    self.OrderQueue.filled == filled
+                    ).order_by(self.OrderQueue.timestamp.asc()).all()
+        session.close()
+        return order_queue if order_queue else None
+        '''
