@@ -98,6 +98,7 @@ class DataBaseAPI(BaseAPI):
         session.add(realtime)
         session.commit()
         #self.log('committed: {} - {}'.format(symbol, time))
+        session.close()
         return True
 
 
@@ -278,6 +279,8 @@ class DataBaseAPI(BaseAPI):
                             self.RealTime.observedTime.between(start_time, end_time)
                             ).order_by(
                             self.RealTime.observedTime).all()
+                 
+        session.close()
         return realtime
 
     def _get_product_id(self, ticker):
