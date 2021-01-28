@@ -97,6 +97,7 @@ class DataBaseAPI(BaseAPI):
                         )
         session.add(realtime)
         session.commit()
+        session.close()
         #self.log('committed: {} - {}'.format(symbol, time))
         session.close()
         return True
