@@ -128,37 +128,30 @@ class DataBaseAPI(BaseAPI):
         session =  self.engine.Session()
         product_id = self._get_product_id(params.get('symbol'))
         if not product_id:
-            self.log("Product doesn't exist! Creating Product for:  {}".format(symbol))
+            self.log(f"Product doesn't exist! Creating Product for:  {symbol}")
             self.CreateProduct(productName = symbol, categoryName = 'cryptocoin')
-            self.log('Created product for {}'.format(symbol))
+            self.log(f'Created product for {symbol}')
             product_id = self._get_product_id(params.get('symbol'))
 
-        '''
-        binance_order = session.query(self.BinanceOrder).filter(
-                                self.BinanceOrder.idbinanceOrder == params.get('orderId')).first()
-        if binance_order:
-            self.log('Binance Order exists:  {}'.format(params.get('idbinanceOrder')))
-            return False
-        '''
 
+        ### Create the binanceOrder
         binance_order = self.BinanceOrder(
-                            idbinanceOrder             = params.get('orderId'),
-                            fk_idproduct_binanceOrder  = product_id,
-                            orderListId                = params.get('orderListId'),
-                            clientOrderId              = params.get('clientOrderId'),
-                            transactTime               = self.from_timestamp(params.get('transactTime')),
-                            price                      = params.get('price'),
-                            origQty                    = params.get('origQty'),
-                            executedQty                = params.get('executedQty'),
-                            cummulativeQuoteQty        = params.get('cummulativeQuoteQty'),
-                            status                     = params.get('status'),
-                            timeInForce                = params.get('timeInForce'),
-                            type                       = params.get('type'),
-                            side                       = params.get('side')
+                            fk_idorderQueue_binanceOrder = int(params.get('clientOrderId')),
+                            fk_idproduct_binanceOrder    = product_id,
+                            orderListId                  = params.get('orderListId'),
+                            transactTime                 = self.from_timestamp(params.get('transactTime')/1000),
+                            price                        = params.get('price'),
+                            origQty                      = params.get('origQty'),
+                            executedQty                  = params.get('executedQty'),
+                            cummulativeQuoteQty          = params.get('cummulativeQuoteQty'),
+                            status                       = params.get('status'),
+                            timeInForce                  = params.get('timeInForce'),
+                            type                         = params.get('type'),
+                            side                         = params.get('side')
                         )
         session.add(binance_order)
         session.commit()
-        self.log('committed: Binance Order {} - {}'.format(binance_order.idbinanceOrder, binance_order.status))
+        self.log(f'committed: Binance Order {binance_order.fk_idorderQueue_binanceOrder} - {binance_order.status}')
         session.close()
         return True
 
@@ -166,17 +159,19 @@ class DataBaseAPI(BaseAPI):
     def InsertBinanceFills(self, params):
         """INSERT fills from successful Binance order payload"""
         session =  self.engine.Session()
-        idbinanceOrder = params.get('orderId')
+        idbinanceOrder = params.get('clientOrderId')
         binance_order = session.query(self.BinanceOrder).filter(
-                    self.BinanceOrder.idbinanceOrder == idbinanceOrder).one_or_none()
+                    self.BinanceOrder.fk_idorderQueue_binanceOrder == idbinanceOrder).one_or_none()
 
         if not binance_order:
             self.log('order {} does not exist!'.format(idbinanceOrder))
         fills = params.get('fills')
 
+        ''' fk_idorderQueue_binanceOrder_binanceFill, price, qty, commission, commissionAsset '''
+
         for current_fill in fills:
             session.add(self.BinanceFill(
-                                fk_idbinanceorder_binanceFill = idbinanceOrder,
+                                fk_idorderQueue_binanceOrder_binanceFill = idbinanceOrder,
                                 price = current_fill.get('price'),
                                 qty =   current_fill.get('qty'),
                                 commission = current_fill.get('commission'),
@@ -185,6 +180,7 @@ class DataBaseAPI(BaseAPI):
             )
         session.commit()
         self.log('committed: Binance Order Fills: {}'.format(binance_order.idbinanceOrder))
+        session.close()
         return True
 
 
@@ -251,11 +247,10 @@ class DataBaseAPI(BaseAPI):
 
 
     def GetPendingOrderQueue(self, delta):
-        """SELECT newest UNFILLED OrderQueue row within a defined time delta"""
+        """SELECT newest OrderQueue row within a defined time delta"""
         session = self.engine.Session()
         delta = timedelta(seconds=delta)
-        order = session.query(self.OrderQueue).filter(self.OrderQueue.timeFilled == None
-                                        ).order_by(self.OrderQueue.timeCreated.desc()).first()
+        order = session.query(self.OrderQueue).filter(self.OrderQueue.executed == False).order_by(self.OrderQueue.timeCreated.desc()).first()
         if (datetime.now() - order.timeCreated > delta) or order is None:
             ####   stale order condition
             return None
@@ -280,7 +275,7 @@ class DataBaseAPI(BaseAPI):
                             self.RealTime.observedTime.between(start_time, end_time)
                             ).order_by(
                             self.RealTime.observedTime).all()
-                 
+
         session.close()
         return realtime
 
