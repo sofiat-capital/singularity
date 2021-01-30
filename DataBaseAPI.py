@@ -105,7 +105,6 @@ class DataBaseAPI(BaseAPI):
         session.add(realtime)
         session.commit()
         session.close()
-        #self.log('committed: {} - {}'.format(symbol, time))
         return True
 
 
@@ -117,11 +116,8 @@ class DataBaseAPI(BaseAPI):
         order = self.OrderQueue(fk_idproduct_orderQueue = product_id,
                                       side        = params['side'],
                                       timeCreated = params.get('timeCreated', datetime.now()),
-                                      price       = params.get('price', None),
-                                      quantity    = params.get('quantity', None),
-                                      timeFilled  = params.get('timeFilled', None)
+                                      price       = params.get('price')
                                       )
-
         session.add(order)
         session.commit()
         self.log(f'committed: Order {params.get("symbol")} - {params.get("side")} to OrderQueue')
@@ -282,7 +278,6 @@ class DataBaseAPI(BaseAPI):
                             self.RealTime.observedTime.between(start_time, end_time)
                             ).order_by(
                             self.RealTime.observedTime).all()
-
         session.close()
         return realtime
 
@@ -319,3 +314,24 @@ class DataBaseAPI(BaseAPI):
         session.close()
         return order_queue if order_queue else None
         '''
+
+    '''
+    def InsertOrderQueue(self, **params):
+        """INSERT order queue entry from BUY/SELL signal"""
+        session = self.engine.Session()
+        product_id = self._get_product_id(params.get('symbol'))
+
+        order = self.OrderQueue(fk_idproduct_orderQueue = product_id,
+                                      side        = params['side'],
+                                      timeCreated = params.get('timeCreated', datetime.now()),
+                                      price       = params.get('price', None),
+                                      quantity    = params.get('quantity', None),
+                                      timeFilled  = params.get('timeFilled', None)
+                                      )
+
+        session.add(order)
+        session.commit()
+        self.log(f'committed: Order {params.get("symbol")} - {params.get("side")} to OrderQueue')
+        session.close()
+        return True
+    '''
