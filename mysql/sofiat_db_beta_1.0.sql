@@ -26,14 +26,15 @@ DROP TABLE IF EXISTS `binanceFill`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `binanceFill` (
   `idbinanceFill` int NOT NULL AUTO_INCREMENT,
-  `fk_idbinanceorder_binanceFill` varchar(36) NOT NULL,
+  `fk_idorderQueue_binanceOrder_binanceFill` int NOT NULL,
   `price` decimal(20,12) NOT NULL,
   `qty` decimal(20,12) NOT NULL,
   `commission` decimal(20,12) DEFAULT NULL,
   `commissionAsset` varchar(15) DEFAULT NULL,
-  PRIMARY KEY (`idbinanceFill`,`fk_idbinanceorder_binanceFill`),
-  KEY `fk_idbinanceorder_binanceFill` (`fk_idbinanceorder_binanceFill`)
-) ENGINE=InnoDB AUTO_INCREMENT=63 DEFAULT CHARSET=utf8;
+  PRIMARY KEY (`idbinanceFill`,`fk_idorderQueue_binanceOrder_binanceFill`),
+  KEY `fk_idorderQueue_binanceOrder_binanceFill_idx` (`fk_idorderQueue_binanceOrder_binanceFill`),
+  CONSTRAINT `fk_idorderQueue_binanceOrder_binanceFill` FOREIGN KEY (`fk_idorderQueue_binanceOrder_binanceFill`) REFERENCES `binanceOrder` (`fk_idorderQueue_binanceOrder`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -44,9 +45,8 @@ DROP TABLE IF EXISTS `binanceOrder`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `binanceOrder` (
-  `idbinanceOrder` int NOT NULL,
-  `fk_idproduct_binanceOrder` int NOT NULL,
   `fk_idorderQueue_binanceOrder` int NOT NULL,
+  `fk_idproduct_binanceOrder` int NOT NULL,
   `orderListId` int NOT NULL,
   `transactTime` datetime NOT NULL,
   `price` decimal(20,12) NOT NULL,
@@ -57,10 +57,10 @@ CREATE TABLE `binanceOrder` (
   `timeInForce` varchar(15) DEFAULT NULL,
   `type` varchar(8) NOT NULL,
   `side` varchar(5) NOT NULL,
-  PRIMARY KEY (`idbinanceOrder`,`fk_idproduct_binanceOrder`),
+  PRIMARY KEY (`fk_idproduct_binanceOrder`,`fk_idorderQueue_binanceOrder`),
   KEY `fk_idproduct_binanceOrder_idx` (`fk_idproduct_binanceOrder`),
   KEY `fk_clientOrderId_idx` (`fk_idorderQueue_binanceOrder`),
-  CONSTRAINT `fk_clientOrderId` FOREIGN KEY (`fk_idorderQueue_binanceOrder`) REFERENCES `orderQueue` (`idorderQueue`),
+  CONSTRAINT `fk_idorderQueue_binanceOrder` FOREIGN KEY (`fk_idorderQueue_binanceOrder`) REFERENCES `orderQueue` (`idorderQueue`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_idproduct_binanceOrder` FOREIGN KEY (`fk_idproduct_binanceOrder`) REFERENCES `product` (`idproduct`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -119,7 +119,7 @@ CREATE TABLE `orderQueue` (
   PRIMARY KEY (`idorderQueue`,`fk_idproduct_orderQueue`),
   KEY `fk_idproduct_orderQueue_idx` (`fk_idproduct_orderQueue`),
   KEY `fk_idbinanceOrder_orderQueue_idx` (`executed`),
-  CONSTRAINT `fk_idproduct_orderQueue` FOREIGN KEY (`fk_idproduct_orderQueue`) REFERENCES `product` (`idproduct`)
+  CONSTRAINT `fk_idproduct_orderQueue` FOREIGN KEY (`fk_idproduct_orderQueue`) REFERENCES `product` (`idproduct`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -155,7 +155,7 @@ CREATE TABLE `realTime` (
   PRIMARY KEY (`idrealTime`,`fk_idproduct_realTime`),
   KEY `fk_idproduct_idx` (`fk_idproduct_realTime`),
   CONSTRAINT `fk_idproduct_realTime` FOREIGN KEY (`fk_idproduct_realTime`) REFERENCES `product` (`idproduct`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=11442 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=11659 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -167,4 +167,6 @@ CREATE TABLE `realTime` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-01-28 20:19:26
+
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+-- Dump completed on 2021-01-29 19:09:54
