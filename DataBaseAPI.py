@@ -1,3 +1,10 @@
+'''
+DATE   : 12/29/2021
+AUTHORS: Devin Whitten & Austin Stockwell
+EMAIL  :  dev.sofiat@gmail.com
+SoFIAT Capital (All rights reserved)
+'''
+############################################################################
 #Python Modules
 import os, sys
 import numpy as np
@@ -99,7 +106,6 @@ class DataBaseAPI(BaseAPI):
         session.commit()
         session.close()
         #self.log('committed: {} - {}'.format(symbol, time))
-        session.close()
         return True
 
 
