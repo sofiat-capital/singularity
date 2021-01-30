@@ -1,3 +1,10 @@
+'''
+DATE   : 12/29/2021
+AUTHORS: Devin Whitten & Austin Stockwell
+EMAIL  :  dev.sofiat@gmail.com
+SoFIAT Capital (All rights reserved)
+'''
+############################################################################
 #Python Modules
 import os, sys
 import numpy as np
@@ -99,7 +106,6 @@ class DataBaseAPI(BaseAPI):
         session.commit()
         session.close()
         #self.log('committed: {} - {}'.format(symbol, time))
-        session.close()
         return True
 
 
@@ -164,7 +170,7 @@ class DataBaseAPI(BaseAPI):
                     self.BinanceOrder.fk_idorderQueue_binanceOrder == idbinanceOrder).one_or_none()
 
         if not binance_order:
-            self.log('order {} does not exist!'.format(idbinanceOrder))
+            self.log(f'order {idbinanceOrder} does not exist!')
         fills = params.get('fills')
 
         ''' fk_idorderQueue_binanceOrder_binanceFill, price, qty, commission, commissionAsset '''
@@ -179,7 +185,7 @@ class DataBaseAPI(BaseAPI):
                         )
             )
         session.commit()
-        self.log('committed: Binance Order Fills: {}'.format(binance_order.idbinanceOrder))
+        self.log('committed: Binance Order Fills: {}'.format(binance_order.fk_idorderQueue_binanceOrder))
         session.close()
         return True
 
@@ -250,12 +256,13 @@ class DataBaseAPI(BaseAPI):
         """SELECT newest OrderQueue row within a defined time delta"""
         session = self.engine.Session()
         delta = timedelta(seconds=delta)
-        order = session.query(self.OrderQueue).filter(self.OrderQueue.executed == False).order_by(self.OrderQueue.timeCreated.desc()).first()
+        order = session.query(self.OrderQueue).filter(
+                                                    self.OrderQueue.executed == False
+                                                    ).order_by(self.OrderQueue.timeCreated.desc()).first()
         if (datetime.now() - order.timeCreated > delta) or order is None:
             ####   stale order condition
             return None
         return order
-
 
 
     def GetRealTime(self, start_time, end_time = None, symbol='ETHUSDT'):
@@ -278,6 +285,7 @@ class DataBaseAPI(BaseAPI):
 
         session.close()
         return realtime
+
 
     def _get_product_id(self, ticker):
         """Helper function -- Returns Product ID when given Ticker Symbol"""

@@ -1,9 +1,3 @@
-SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
-SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
-SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
--- -----------------------------------------------------
-
-
 CREATE DATABASE  IF NOT EXISTS `sofiat` /*!40100 DEFAULT CHARACTER SET utf8 */ /*!80016 DEFAULT ENCRYPTION='N' */;
 USE `sofiat`;
 -- MySQL dump 10.13  Distrib 8.0.22, for macos10.15 (x86_64)
@@ -50,9 +44,9 @@ DROP TABLE IF EXISTS `binanceOrder`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `binanceOrder` (
-  `idbinanceOrder` varchar(36) NOT NULL,
+  `idbinanceOrder` int NOT NULL,
   `fk_idproduct_binanceOrder` int NOT NULL,
-  `fk_clientOrderId` int NOT NULL,
+  `fk_idorderQueue_binanceOrder` int NOT NULL,
   `orderListId` int NOT NULL,
   `transactTime` datetime NOT NULL,
   `price` decimal(20,12) NOT NULL,
@@ -65,8 +59,8 @@ CREATE TABLE `binanceOrder` (
   `side` varchar(5) NOT NULL,
   PRIMARY KEY (`idbinanceOrder`,`fk_idproduct_binanceOrder`),
   KEY `fk_idproduct_binanceOrder_idx` (`fk_idproduct_binanceOrder`),
-  KEY `fk_clientOrderId_idx` (`fk_clientOrderId`),
-  CONSTRAINT `fk_clientOrderId` FOREIGN KEY (`fk_clientOrderId`) REFERENCES `orderQueue` (`idorderQueue`),
+  KEY `fk_clientOrderId_idx` (`fk_idorderQueue_binanceOrder`),
+  CONSTRAINT `fk_clientOrderId` FOREIGN KEY (`fk_idorderQueue_binanceOrder`) REFERENCES `orderQueue` (`idorderQueue`),
   CONSTRAINT `fk_idproduct_binanceOrder` FOREIGN KEY (`fk_idproduct_binanceOrder`) REFERENCES `product` (`idproduct`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -119,13 +113,14 @@ CREATE TABLE `orderQueue` (
   `idorderQueue` int NOT NULL AUTO_INCREMENT,
   `fk_idproduct_orderQueue` int NOT NULL,
   `side` varchar(45) NOT NULL,
-  `timestamp` datetime NOT NULL,
+  `timeCreated` datetime NOT NULL,
   `price` decimal(20,12) NOT NULL,
-  `quantity` decimal(20,12) NOT NULL,
+  `executed` tinyint NOT NULL DEFAULT '0',
   PRIMARY KEY (`idorderQueue`,`fk_idproduct_orderQueue`),
   KEY `fk_idproduct_orderQueue_idx` (`fk_idproduct_orderQueue`),
+  KEY `fk_idbinanceOrder_orderQueue_idx` (`executed`),
   CONSTRAINT `fk_idproduct_orderQueue` FOREIGN KEY (`fk_idproduct_orderQueue`) REFERENCES `product` (`idproduct`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -160,9 +155,7 @@ CREATE TABLE `realTime` (
   PRIMARY KEY (`idrealTime`,`fk_idproduct_realTime`),
   KEY `fk_idproduct_idx` (`fk_idproduct_realTime`),
   CONSTRAINT `fk_idproduct_realTime` FOREIGN KEY (`fk_idproduct_realTime`) REFERENCES `product` (`idproduct`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=11326 DEFAULT CHARSET=utf8;
-
-
+) ENGINE=InnoDB AUTO_INCREMENT=11442 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -174,4 +167,4 @@ CREATE TABLE `realTime` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-01-28 17:48:13
+-- Dump completed on 2021-01-28 20:19:26
