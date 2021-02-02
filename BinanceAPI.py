@@ -183,11 +183,12 @@ class BinanceAPI(BaseAPI):
         # ? symbol separates the endpoint (page) from encoded information
         url += '?' + body
         self.log(url)
-        self.log("Sending Order Request - \n{} ".format(json.dumps(params, indent=4)))
+        self.log("Sending Order Request {}")#.format(json.dumps(params, indent=4)))
         #self.response = requests.post(url, headers).content
         self.response = json.loads(session.post(url).content)
         #self.response = test_payloads.ORDER_RESPONSE
         self.log(json.dumps(self.response, indent = 4))
+        session.close()
         return self.response
 
 
@@ -208,10 +209,11 @@ class BinanceAPI(BaseAPI):
         # ? symbol separates the endpoint (page) from encoded information
         url += '?' + body
         self.log(url)
-        self.log("Sending Order Request - \n{} ".format(json.dumps(params, indent=4)))
+        self.log("Sending Order Request") #.format(json.dumps(params, indent=4)))
         #self.response = requests.post(url, headers).content
         self.response = json.loads(session.post(url).content)
         self.log(json.dumps(self.response, indent = 4))
+        session.close()
         return self.response
 
 
@@ -242,6 +244,7 @@ class BinanceAPI(BaseAPI):
         self.log(url)
         self.response = json.loads(session.get(url).content.decode('utf-8'))
         #self.log(self.response)
+        session.close()
         return self.response
 
     ######################################################

@@ -21,6 +21,7 @@ from sqlalchemy.types import TypeEngine
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 import pprint
+from sqlalchemy.pool import NullPool
 #SoFIAT Modules
 from .base import BaseAPI
 ############################################################################
@@ -29,9 +30,10 @@ class SQLEngine(BaseAPI):
     def __init__(self):
         super().__init__()
         self.keychain = {'mysql' : os.environ.get('mysql_key')}
+
         try:
             url = 'mysql+pymysql://root:{}@localhost/sofiat'.format(self.keychain.get('mysql'))
-            self.Engine = create_engine(url)
+            self.Engine = create_engine(url, poolclass=NullPool)#pool_size=20, max_overflow=0, pool_recycle=10)
             self.Engine.connect()
             self.Session = sessionmaker()
             self.Session.configure(bind=self.Engine)
@@ -40,8 +42,41 @@ class SQLEngine(BaseAPI):
         self.base = automap_base()
         self.base.prepare(self.Engine, reflect=True)
         self.models = self.base.classes
-        self.log('Initializing SQL Engine')
+        #self.log('Initializing SQL Engine')
         return
+'''
+    def Session(self):
+        self.Engine.connect()
+        self.session = sessionmaker()
+        self.session.configure(bind=self.Engine)
+        return self.session()
+
+
+class Session(SQLEngine):
+    def __init__(self):
+        super().__init__()
+        self.Engine.connect()
+        self.session = sessionmaker()
+        self.session.configure(bind=self.Engine)
+
+        self.current = self.session()
+
+    @property
+    def query(self):
+        return self.current.query
+
+    def add(self, element):
+        self.current.add(element)
+
+    def commit(self):
+        self.current.commit()
+
+    def close(self):
+        self.current.close()
+        self.Engine.close()
+
+'''
+
 
 
 class DataBaseAPI(BaseAPI):
@@ -63,7 +98,12 @@ class DataBaseAPI(BaseAPI):
         self.OrderQueue   = self.engine.models.get('orderQueue')
         return
 
+    @property
+    def session(self):
+        return self.engine.Session()
 
+    def status(self):
+        self.log(self.engine.Engine.pool.status())
 ################################################################################
     ############################################################################
     ### Insert FUNCTIONS
@@ -113,6 +153,16 @@ class DataBaseAPI(BaseAPI):
         session = self.engine.Session()
         product_id = self._get_product_id(params.get('symbol'))
 
+        order = session.query(self.OrderQueue).filter(
+                    self.OrderQueue.fk_idproduct_orderQueue == product_id,
+                    self.OrderQueue.side == params['side'],
+                    params.get('timeCreated', datetime.now()) - self.OrderQueue.timeCreated < timedelta(seconds=30)
+                    ).one_or_none()
+
+        if order:
+            session.close()
+            return False
+
         order = self.OrderQueue(fk_idproduct_orderQueue = product_id,
                                       side        = params['side'],
                                       timeCreated = params.get('timeCreated', datetime.now()),
@@ -120,7 +170,7 @@ class DataBaseAPI(BaseAPI):
                                       )
         session.add(order)
         session.commit()
-        self.log(f'committed: Order {params.get("symbol")} - {params.get("side")} to OrderQueue')
+        #self.log(f'committed: Order {params.get("symbol")} - {params.get("side")} to OrderQueue')
         session.close()
         return True
 
@@ -245,20 +295,39 @@ class DataBaseAPI(BaseAPI):
                              columns = columns)
         frame['date'] = pd.to_datetime(frame['date'], format='%Y-%m-%d')
         frame = frame.set_index('date').sort_index()
+        session.close()
         return frame
 
 
     def GetPendingOrderQueue(self, delta):
         """SELECT newest OrderQueue row within a defined time delta"""
-        session = self.engine.Session()
+        session =  self.engine.Session()
         delta = timedelta(seconds=delta)
         order = session.query(self.OrderQueue).filter(
                                                     self.OrderQueue.executed == False
                                                     ).order_by(self.OrderQueue.timeCreated.desc()).first()
-        if (datetime.now() - order.timeCreated > delta) or order is None:
+        if order is None or (datetime.now() - order.timeCreated > delta):
             ####   stale order condition
             return None
+        session.close()
         return order
+
+    def UpdateOrderQueue(self, order):
+        """SELECT newest OrderQueue row within a defined time delta"""
+        session = self.engine.Session()
+
+        order = session.query(self.OrderQueue).filter(
+                                                    self.OrderQueue.idorderQueue == order.idorderQueue
+                                                    ).one_or_none()
+        if order:
+            order.executed = True
+            session.add(order)
+            session.commit()
+            session.close()
+            return True
+
+        session.close()
+        return False
 
 
     def GetRealTime(self, start_time, end_time = None, symbol='ETHUSDT'):
@@ -288,9 +357,22 @@ class DataBaseAPI(BaseAPI):
         product = session.query(self.Product).filter(self.Product.ticker == ticker).first()
         if not product:
             self.log("Product {} doesn't exist".format(ticker))
+            session.close()
             return None
         session.close()
         return product.idproduct
+
+
+    def _get_symbol_from_id(self, product_id):
+        """Helper function -- Returns Product ID when given Ticker Symbol"""
+        session = self.engine.Session()
+        product = session.query(self.Product).filter(self.Product.idproduct == product_id).first()
+        if not product:
+            self.log("Product ID {} doesn't exist".format(product_id))
+            session.close()
+            return None
+        session.close()
+        return product.ticker
 
 
 
