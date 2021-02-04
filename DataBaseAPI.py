@@ -153,6 +153,16 @@ class DataBaseAPI(BaseAPI):
         session = self.engine.Session()
         product_id = self._get_product_id(params.get('symbol'))
 
+        #order = session.query(self.OrderQueue).filter(
+        #            self.OrderQueue.fk_idproduct_orderQueue == product_id,
+        #            self.OrderQueue.side == params['side'],
+        #            params.get('timeCreated', datetime.now()) - self.OrderQueue.timeCreated < timedelta(seconds=30)
+        #            ).one_or_none()
+
+        #if order:
+        #    session.close()
+        #    return False
+
         order = self.OrderQueue(fk_idproduct_orderQueue = product_id,
                                       side        = params['side'],
                                       timeCreated = params.get('timeCreated', datetime.now()),

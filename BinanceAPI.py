@@ -149,7 +149,7 @@ class BinanceAPI(BaseAPI):
         if params:
             body += '&' + '&'.join(f'{key}={value}' for key, value in params.items())
         url += body
-        self.log(url)
+        #self.log(url)
         self.response = json.loads(requests.get(url).content)
         frame = pd.DataFrame([self._format_kline(kline) for kline in self.response])
         frame['symbol'] = [symbol] * len(frame)
@@ -179,6 +179,7 @@ class BinanceAPI(BaseAPI):
         params.update(self.gen_authenticator(params))
         headers = self.gen_headers()
         body = self.gen_payload(params)
+        print(params)
         session.headers.update(headers)
         # ? symbol separates the endpoint (page) from encoded information
         url += '?' + body
@@ -206,12 +207,13 @@ class BinanceAPI(BaseAPI):
         headers = self.gen_headers()
         body = self.gen_payload(params)
         session.headers.update(headers)
+        #print(params)
         # ? symbol separates the endpoint (page) from encoded information
         url += '?' + body
-        self.log(url)
+        #self.log(url)
         self.log("Sending Order Request") #.format(json.dumps(params, indent=4)))
-        #self.response = requests.post(url, headers).content
         self.response = json.loads(session.post(url).content)
+        #self.response = json.loads(session.post(url).content)
         self.log(json.dumps(self.response, indent = 4))
         session.close()
         return self.response
