@@ -187,8 +187,8 @@ class BinanceAPI(BaseAPI):
         self.log("Sending Order Request {}")#.format(json.dumps(params, indent=4)))
         #self.response = requests.post(url, headers).content
         self.response = json.loads(session.post(url).content)
-        self.response = test_payloads.ORDER_RESPONSE
-        #self.log(json.dumps(self.response, indent = 4))
+        #self.response = test_payloads.ORDER_RESPONSE
+        self.log(json.dumps(self.response, indent = 4))
         session.close()
         return self.response
 
@@ -212,7 +212,7 @@ class BinanceAPI(BaseAPI):
         url += '?' + body
         #self.log(url)
         self.log("Sending Order Request") #.format(json.dumps(params, indent=4)))
-        self.response = requests.post(url, headers).content
+        self.response = json.loads(session.post(url).content)
         #self.response = json.loads(session.post(url).content)
         self.log(json.dumps(self.response, indent = 4))
         session.close()
