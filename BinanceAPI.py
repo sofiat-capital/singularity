@@ -161,7 +161,7 @@ class BinanceAPI(BaseAPI):
         url = self.keychain.get('basepoint') + self._endpoints.get('currentAveragePrice')
         url += '?symbol={}'.format(symbol)
         self.response = json.loads(requests.get(url).content)
-        self.log(self.response)
+        #self.log(self.response)
         return self.response
 
     ############################################################################
@@ -241,7 +241,7 @@ class BinanceAPI(BaseAPI):
         body = self.gen_payload(params)
         session.headers.update(headers)
         url += '?' + body
-        self.log(url)
+        #self.log(url)
         self.response = json.loads(session.get(url).content.decode('utf-8'))
         #self.log(self.response)
         session.close()
