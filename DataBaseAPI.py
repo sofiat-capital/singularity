@@ -10,6 +10,7 @@ import os, sys
 import numpy as np
 import pandas as pd
 import datetime
+
 from sqlalchemy import (create_engine, MetaData, Column,
         Integer, String, Table)
 from datetime import datetime, timedelta
@@ -96,6 +97,7 @@ class DataBaseAPI(BaseAPI):
         self.BinanceOrder = self.engine.models.get('binanceOrder')
         self.BinanceFill  = self.engine.models.get('binanceFill')
         self.OrderQueue   = self.engine.models.get('orderQueue')
+        self.Portfolio    = self.engine.models.get('portfolio')
         return
 
     @property
@@ -231,9 +233,27 @@ class DataBaseAPI(BaseAPI):
                         )
             )
         session.commit()
-        self.log('committed: Binance Order Fills: {}'.format(binance_order.fk_idorderQueue_binanceOrder))
+        self.log(f"committed: Binance Order Fills: {binance_order.fk_idorderQueue_binanceOrder}")
         session.close()
         return True
+
+
+    def InsertPortfolio(self, params):
+        """INSERT fills from successful Binance order payload"""
+        ''' idportfolio, asOfDate, valuation, USD, BTC, ETH, LTC '''
+        session =  self.engine.Session()
+        portfolio = self.Portfolio(
+                asOfDate  = params.get('asOfDate', datetime.now()),
+                valuation = params.get('valuation'),
+                USD       = params.get('USD', 0.0),
+                BTC       = params.get('BTC', 0.0),
+                ETH       = params.get('ETH', 0.0),
+                LTC       = params.get('LTC', 0.0)
+                    )
+        session.add(portfolio)
+        session.commit()
+        self.log(f"Committed: Portfolio Snapshots: {params.get('valuation')}")
+        session.close()
 
 
     ############################################################################
@@ -349,6 +369,17 @@ class DataBaseAPI(BaseAPI):
                             self.RealTime.observedTime).all()
         session.close()
         return realtime
+
+
+    def GetBinanceOrderFills(self):
+        """SELECT from BinanceFill table of SoFIAT database"""
+        session = self.engine.Session()
+
+        orders = session.query(self.BinanceOrder).join(self.BinanceFill).order_by(self.BinanceOrder.transactTime.desc()).all()
+
+        return orders
+
+
 
 
     def _get_product_id(self, ticker):

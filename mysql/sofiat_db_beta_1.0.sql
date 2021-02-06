@@ -156,6 +156,22 @@ CREATE TABLE `realTime` (
   KEY `fk_idproduct_idx` (`fk_idproduct_realTime`),
   CONSTRAINT `fk_idproduct_realTime` FOREIGN KEY (`fk_idproduct_realTime`) REFERENCES `product` (`idproduct`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=11659 DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `realTime`;
+CREATE TABLE IF NOT EXISTS `sofiat`.`portfolio` (
+  `idportfolio` INT NOT NULL AUTO_INCREMENT,
+  `asOfDate` DATETIME NOT NULL,
+  `valuation` DECIMAL(20, 2) NOT NULL,
+  `USD` DECIMAL(10,2) NULL,
+  `BTC` DECIMAL(10,6) NULL,
+  `ETH` DECIMAL(10,6) NULL,
+  `LTC`  DECIMAL(10,6) NULL,
+  PRIMARY KEY (`idportfolio`)
+  )
+ENGINE = InnoDB;
+
+
+
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
