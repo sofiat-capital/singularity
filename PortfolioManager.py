@@ -2,6 +2,7 @@
 DATE   : 12/29/2021
 AUTHORS: Devin Whitten & Austin Stockwell
 EMAIL  :  dev.sofiat@gmail.com
+SCOPE: Stats and values of SoFIAT Portfolio
 SoFIAT Capital (All rights reserved)
 '''
 ################################################################################
@@ -23,9 +24,9 @@ class PortfolioManager(BaseAPI):
         self.DataBaseAPI = DataBaseAPI()
         self.skype = None
         self.log('Initialized PortfolioManager')
+        self.symbols = self.DataBaseAPI.GetProductTickers()
         return
-
-
+################################################################################
     def GetBalance(self, symbol = None):
         """Return account balance"""
         self.wallet = self.BinanceAPI.AccountInfo()
@@ -41,10 +42,8 @@ class PortfolioManager(BaseAPI):
 
         return self.wallet.get('balances')
 
-################################################################################
 
     def GetUSDTotal(self):
-        ##symbol = ['BTC', 'ETH', 'LTC']
         """ Computes total USD value of portfolio"""
         self.GetBalance()
         USD_TOTAL = 0
@@ -57,56 +56,56 @@ class PortfolioManager(BaseAPI):
             balance = float(row['free']) + float(row['locked'])
             price = self.BinanceAPI.CurrentAveragePrice(symbol = symbol + "USD").get('price') if balance else 0.0
             USD_TOTAL += float(price) * balance
-
         return USD_TOTAL
 
 
-    def ComputeGainsTable(self, symbol = 'BTCUSDT'):
-        orders = self.DataBaseAPI.GetBinanceOrderFills()
-        #print(len(orders))
-        print(orders)
+    def ComputeGainsTable(self):
+        """Computes cycle gains on pall SoFIAT products"""
+        #List holds the gains of each product (then INSERTED into GainsTable)
+        gains_frame = []
 
-        #Intitialize gains table that will be appended with CYCLE GAINS
-        gain = []
-        print("------------------------")
-        entry_total = 0
-        exit_total = 0
-        #Iterating throught JOINED TABLE ()
-        for order in orders:
+        #Loop through each symbol in ProductTable
+        for symbol in self.symbols:
+            orders = self.DataBaseAPI.GetBinanceOrderFills(symbol = symbol)
 
-            side = order.side
-            fills = order.binancefill_collection
+            #Intitialize gains frame that will be appended with CYCLE GAINS
+            gain = []
 
-            fill_frame = pd.DataFrame([[fill.qty, fill.price] for fill in fills],
-                                        columns = ['qty', 'price'])
-            #####################
-            if  side == 'BUY':
-                print(' BUYING')
-                entry_total = np.array(fill_frame['qty'] * fill_frame['price'], dtype=float).sum()
-                pass
+            #Initialize entry and exit totals
+            entry_total = 0
+            exit_total  = 0
 
-            elif side == 'SELL':
-                print(' Selling')
+            #Iterating throught JOINED TABLE (binanceOrder & binanceFill)
+            for order in orders:
+                side = order.side
+                fills = order.binancefill_collection
+                fill_frame = pd.DataFrame([[fill.qty, fill.price] for fill in fills],
+                                            columns = ['qty', 'price'])
 
-                exit_total  = np.array(fill_frame['qty'] * fill_frame['price'], dtype=float).sum()
-                percent_gain = 100.* (np.divide(exit_total , entry_total) - 1.)
-                monetary_gain = (exit_total - entry_total)
+                if  side == 'BUY':
+                    #Assign newest entry for BUY price of all fills to entry_total
+                    entry_total = np.array(fill_frame['qty'] * fill_frame['price'], dtype=float).sum()
+                    pass
 
-                gain.append([order.transactTime,  percent_gain, monetary_gain ])
-            #####################
-        return pd.DataFrame(gain, columns=['time', 'gain[%]', 'gain[$]'])
+                elif side == 'SELL':
+                    #Assign newest entry for SELL price of all fills to exit_total
+                    exit_total  = np.array(fill_frame['qty'] * fill_frame['price'], dtype=float).sum()
 
+                    #Calculate % gains / montetary gain of Cycle
+                    percent_gain = 100.* (np.divide(exit_total , entry_total) - 1.)
+                    monetary_gain = (exit_total - entry_total)
 
-        '''
+                    #Append cycle's performance metrics to gain frame
+                    gain.append([symbol, order.transactTime,  percent_gain, monetary_gain])
 
-            fill_frame = pd.DataFrame([[fill.price, fill.qty] for fill in fills], columns = ['price', 'qty'])
-            fill_frame['total'] = float(fill_frame['qty'] * fill_frame['price'])
+                frame = pd.DataFrame(gain, columns=['symbol', 'time', 'gain[%]', 'gain[$]'])
+            #Add products gains to grain_frame
+            gains_frame.append(frame.iloc[1:])
 
-            print(side, "---------", fill_frame['total'])
-
-        return fill_frame
-        '''
-
+            #gains_frame = pd.concat(gains_frame)
+        gains_frame = pd.concat(gains_frame)
+        self.DataBaseAPI.InsertGainsTable(gains_frame)
+        return gains_frame
 
 
     def CashOut(self):
