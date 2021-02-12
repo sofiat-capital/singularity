@@ -45,38 +45,6 @@ class SQLEngine(BaseAPI):
         self.models = self.base.classes
         #self.log('Initializing SQL Engine')
         return
-'''
-    def Session(self):
-        self.Engine.connect()
-        self.session = sessionmaker()
-        self.session.configure(bind=self.Engine)
-        return self.session()
-
-
-class Session(SQLEngine):
-    def __init__(self):
-        super().__init__()
-        self.Engine.connect()
-        self.session = sessionmaker()
-        self.session.configure(bind=self.Engine)
-
-        self.current = self.session()
-
-    @property
-    def query(self):
-        return self.current.query
-
-    def add(self, element):
-        self.current.add(element)
-
-    def commit(self):
-        self.current.commit()
-
-    def close(self):
-        self.current.close()
-        self.Engine.close()
-
-'''
 
 
 
@@ -98,6 +66,7 @@ class DataBaseAPI(BaseAPI):
         self.BinanceFill  = self.engine.models.get('binanceFill')
         self.OrderQueue   = self.engine.models.get('orderQueue')
         self.Portfolio    = self.engine.models.get('portfolio')
+        self.GainsTable   = self.engine.models.get('gainsTable')
         return
 
     @property
@@ -256,6 +225,33 @@ class DataBaseAPI(BaseAPI):
         session.close()
 
 
+    def InsertGainsTable(self, gains_frame):
+        session =  self.engine.Session()
+
+        for i, row in gains_frame.iterrows():
+            #print(gains_frame['time'])
+            print(row['time'].to_pydatetime(), type(row['time']))
+            new_table = session.query(self.GainsTable).filter(
+                                    self.GainsTable.symbol == row['symbol'],
+                                    self.GainsTable.cycleTime == row['time'].to_pydatetime()
+                                    ).one_or_none()
+
+
+            if new_table is None:   ## uf the gainstable doesn't exist
+                new_table = self.GainsTable(
+                        symbol       = row['symbol'],
+                        cycleTime    = row['time'].to_pydatetime(),
+                        gainPercent  = row['gain[%]'],
+                        gainAmount   = row['gain[$]'],
+                        fk_idproduct_gainsTable = self._get_product_id(row['symbol'])
+                        )
+                session.add(new_table)
+
+        session.commit()
+        session.close()
+
+        return
+
     ############################################################################
     ### CREATE STATEMENTS
     ############################################################################
@@ -294,6 +290,13 @@ class DataBaseAPI(BaseAPI):
     ############################################################################
     ### SELECT STATEMENTS (Accessors)
     ############################################################################
+    def GetProductTable(self):
+        """SELECT"""
+        session = self.engine.Session()
+        product_list = session.query(self.Product).all()
+        session.close()
+        return product_list
+
     def GetDayCandleFrame(self, symbol='ETHUSDT', columns = None):
         """SELECT from DayCandles table of SoFIAT Database"""
         #IF columns isn't provided in param list, return all columns in table
@@ -332,6 +335,7 @@ class DataBaseAPI(BaseAPI):
         session.close()
         return order
 
+
     def UpdateOrderQueue(self, order):
         """SELECT newest OrderQueue row within a defined time delta"""
         session = self.engine.Session()
@@ -345,7 +349,6 @@ class DataBaseAPI(BaseAPI):
             session.commit()
             session.close()
             return True
-
         session.close()
         return False
 
@@ -371,17 +374,9 @@ class DataBaseAPI(BaseAPI):
         return realtime
 
 
-    def GetBinanceOrderFills(self):
-        """SELECT from BinanceFill table of SoFIAT database"""
-        session = self.engine.Session()
-
-        orders = session.query(self.BinanceOrder).join(self.BinanceFill).order_by(self.BinanceOrder.transactTime.desc()).all()
-
-        return orders
-
-
-
-
+    ############################################################################
+    ### HELPER FUNCTIONS
+    ############################################################################
     def _get_product_id(self, ticker):
         """Helper function -- Returns Product ID when given Ticker Symbol"""
         session = self.engine.Session()
@@ -406,8 +401,31 @@ class DataBaseAPI(BaseAPI):
         return product.ticker
 
 
+    ############################################################################
+    ### USER
+    ############################################################################
+    def GetBinanceOrderFills(self, symbol  = "ETHUSDT"):
+        """SELECT and JOIN binanceOrder & binanceFill tables"""
+        session = self.engine.Session()
+        product_id = self._get_product_id(symbol)
+
+        #FULLY JOIN binanceOrder & binaceFills tables
+        orders = session.query(self.BinanceOrder).join(self.BinanceFill).filter(
+                            self.BinanceOrder.fk_idproduct_binanceOrder == product_id
+                            ).order_by(self.BinanceOrder.transactTime.desc()).all()
+        #
+        return orders
 
 
+    def GetProductTickers(self):
+        """SELECT and return only ticker column"""
+        session = self.engine.Session()
+        tickers = []
+        rows = session.query(self.Product).all()
+        for row in rows:
+            tickers.append(row.ticker)
+        session.close()
+        return tickers
 
 ################################################################################
     '''
