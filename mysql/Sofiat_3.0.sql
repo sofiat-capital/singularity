@@ -18,7 +18,7 @@
 --
 -- Table structure for table `BinanceFill`
 --
-
+use sofiat_test;
 DROP TABLE IF EXISTS `BinanceFill`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -176,11 +176,6 @@ CREATE TABLE `RealTime` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Dumping events for database 'sofiat_test'
---
-
---
 -- Dumping routines for database 'sofiat_test'
 --
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -194,3 +189,17 @@ CREATE TABLE `RealTime` (
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2021-02-14 16:46:15
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+
+TRUNCATE sofiat_test.BinanceFill;
+TRUNCATE sofiat_test.BinanceOrder;
+TRUNCATE sofiat_test.Category;
+TRUNCATE sofiat_test.DayCandle;
+TRUNCATE sofiat_test.OrderQueue;
+TRUNCATE sofiat_test.Portfolio;
+TRUNCATE sofiat_test.Product;
+TRUNCATE sofiat_test.RealTime;
+
+
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=1 */;
+
