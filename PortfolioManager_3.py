@@ -39,7 +39,6 @@ class PortfolioManager(BaseAPI):
                     self.log(f"Your balance  of {balance.get('free')} is...")
             return Decimal(balance.get('free')) if balance else None
             self.log(f" Balance {self.wallet['balance']} Time {datetime.now()}")
-
         return self.wallet.get('balances')
 
 
@@ -107,6 +106,48 @@ class PortfolioManager(BaseAPI):
         self.DataBaseAPI.InsertGainsTable(gains_frame)
         return gains_frame
 
+
+
+    def PerformanceReport(self, to_skype=True):
+        """ Logs the current USD Valuation of Portfolio,
+            appends portfolio table with current quantities
+            logs portfolio gains since runtime
+        """
+        current_value = self.PortfolioManager.GetUSDTotal()
+        gain = (current_value/self.initial_balance - 1) * 100
+        self.span_window()
+        self.log(f'Current Balance:  ${round(current_value,2)}\nRuntime Gain:  {round(gain,2)}%', to_skype=to_skype)
+
+        #Returns a list of dictionaries (rows of info about each financial product)
+        balances = self.PortfolioManager.wallet.get('balances')
+
+        #Convert list of dictionaries above into a panda frame for ease of use
+        balancesFrame = pd.DataFrame(balances)
+        #Turns index column into asset column
+        balancesFrame.index = balancesFrame.asset
+
+        #Search through dataframe for the values associated with each product
+        #Cast data in frame to floats to perform totals on each product
+        BNB = np.array(balancesFrame.loc['BNB'][['free', 'locked']], dtype=float).sum()
+        BTC = np.array(balancesFrame.loc['BTC'][['free', 'locked']], dtype=float).sum()
+        ETH = np.array(balancesFrame.loc['ETH'][['free', 'locked']], dtype=float).sum()
+        LTC = np.array(balancesFrame.loc['LTC'][['free', 'locked']], dtype=float).sum()
+
+        #Sum up all USDT Tethers(create single value for portfolio table)
+        USD = 0
+        for ele in ['USD', 'USDT', 'USDC']:
+            USD += np.array(balancesFrame.loc[ele][['free', 'locked']], dtype=np.float64).sum()
+
+        self.DataBaseAPI.InsertPortfolio(
+                {'asOfDate'  : datetime.now(),
+                 'valuation' : float(current_value),
+                 'USD'       : float(USD),
+                 'BTC'       : float(BTC),
+                 'ETH'       : float(ETH),
+                 'LTC'       : float(LTC),
+                 'BNB'       : float(BNB)
+                })
+        return
 
 
     def CashOut(self):
