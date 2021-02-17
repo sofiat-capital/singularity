@@ -124,7 +124,7 @@ class DataBaseAPI(BaseAPI):
         session = self.engine.Session()
         product_id = self._get_product_id(params.get('symbol'))
 
-        start_date = datetime.now() - timedelta(seconds = 60)
+        start_date = datetime.now() - timedelta(seconds = params.get('interval', 60 * 30))
         order = session.query(self.OrderQueue).filter(
                             self.OrderQueue.fk_idproduct_orderQueue == product_id,
                             self.OrderQueue.side == params['side'],
