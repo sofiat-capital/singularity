@@ -124,15 +124,15 @@ class DataBaseAPI(BaseAPI):
         session = self.engine.Session()
         product_id = self._get_product_id(params.get('symbol'))
 
-        #order = session.query(self.OrderQueue).filter(
-        #            self.OrderQueue.fk_idproduct_orderQueue == product_id,
-        #            self.OrderQueue.side == params['side'],
-        #            params.get('timeCreated', datetime.now()) - self.OrderQueue.timeCreated < timedelta(seconds=30)
-        #            ).one_or_none()
+        start_date = datetime.now() - timedelta(seconds = 60)
+        order = session.query(self.OrderQueue).filter(
+                            self.OrderQueue.fk_idproduct_orderQueue == product_id,
+                            self.OrderQueue.side == params['side'],
+                            self.OrderQueue.timeCreated > start_date).all()
 
-        #if order:
-        #    session.close()
-        #    return False
+        if order:
+            session.close()
+            return False
 
         order = self.OrderQueue(fk_idproduct_orderQueue = product_id,
                                       side        = params['side'],

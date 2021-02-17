@@ -153,6 +153,14 @@ class BinanceAPI(BaseAPI):
         self.response = json.loads(requests.get(url).content)
         frame = pd.DataFrame([self._format_kline(kline) for kline in self.response])
         frame['symbol'] = [symbol] * len(frame)
+
+        ['open_time', 'volume close_time',
+        'open high',
+        'low', 'close',
+        'quote_asset_volume', 'number_of_trades',
+        'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume',
+        'ignore', 'symbol']
+
         return frame
 
 
