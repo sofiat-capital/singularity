@@ -7,9 +7,14 @@ from sqlalchemy.dialects.mysql import INTEGER, VARCHAR, DATE, DECIMAL, TINYINT, 
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.schema import PrimaryKeyConstraint, ForeignKeyConstraint, ForeignKey
 from datetime import datetime, timedelta
+
 #SoFIAT modules
 from .base import BaseAPI
-
+from sqlalchemy.pool import NullPool
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.automap import automap_base
+import os
 ################################################################################
 #Create SoFIAT DB classesz
 ################################################################################
@@ -103,6 +108,19 @@ class TableMixin(object):
             mysql_engine="InnoDB"
             )
 
+        #CHANGE 'GAINSTABLE' TO 'GAINS'
+        self.Gains = Table('Gains', self.metadata,
+            Column('idGains', INTEGER(11, unsigned=True), primary_key=True, nullable=False, autoincrement=True),
+            Column('fk_idProduct_Gains', INTEGER(11), nullable=False),
+            Column('symbol', VARCHAR(10), nullable=False),
+            Column('cycleTime', DATETIME(), nullable=False),
+            Column('gainPercent', DECIMAL(20,12), nullable=False),
+            Column('gainAmount', DECIMAL(10,3), nullable=False),
+            PrimaryKeyConstraint('idGains', name='idGains_pk'),
+            ForeignKeyConstraint(['fk_idProduct_Gains'],['Product.idProduct']),
+            mysql_engine="InnoDB"
+            )
+
 
 class DataBaseAPI(BaseAPI, TableMixin):
     """API for SoFIAT MySQL Database"""
@@ -111,11 +129,14 @@ class DataBaseAPI(BaseAPI, TableMixin):
         BaseAPI.__init__(self)
         TableMixin.__init__(self)
 
-        self.engine = create_engine(f"mysql+pymysql://root:Th3T3chBoy$@localhost/sofiat?charset=utf8mb4")
-        #Use connect() method of the Engine object to returns an object Connection type
+        #Make connection to database
+        self.keychain = {'mysql' : os.environ.get('mysql_key')}
+        url = 'mysql+pymysql://root:{}@localhost/sofiat'.format(self.keychain.get('mysql'))
+
+        #Create engine & connect
+        self.engine = create_engine(url)
         self.engine.connect()
         return
-
 
     ############################################################################
     ### SELECT statements
@@ -137,10 +158,9 @@ class DataBaseAPI(BaseAPI, TableMixin):
         connection = self.engine.connect()
         product_id = self._get_product_id(symbol)
 
-        #FULLY JOIN binanceOrder & binaceFills tables
         j = self.BinanceOrder.join(self.BinanceFill, self.BinanceOrder.c.fk_idOrderQueue_BinanceOrder == self.BinanceFill.c.fk_idOrderQueue_BinanceOrder_BinanceFill)
-        statement = j.select(j).where(self.BinanceOrder.c.fk_idProduct_BinanceOrder == 13)
-        result = connection.execute(statement)#.fetchall()
+        statement = select([self.BinanceOrder, self.BinanceFill]).select_from(j).where(self.BinanceOrder.c.fk_idProduct_BinanceOrder == product_id)
+        result = connection.execute(statement).fetchall()
         return result
 
 
@@ -174,6 +194,27 @@ class DataBaseAPI(BaseAPI, TableMixin):
     ############################################################################
     ### INSERT statements
     ############################################################################
+    def CreateProduct(self, productName, categoryName):
+        """INSERT into Product table of SoFIAT Database"""
+        connection = self.engine.connect()
+        statement = self.Product.insert().values(
+                        fk_idCategory_Product  =  self._get_category_id(categoryName),
+                        ticker = productName)
+        connection.execute(statement)
+        self.log(f'Created Product:  {productName} - {categoryName}')
+        return True
+
+
+    def CreateCategory(self, name):
+        """INSERT into Category table of SoFIAT Database"""
+        connection = self.engine.connect()
+        query = self.Category.insert().values(
+                        name = name)
+        result = connection.execute(query)
+        self.log(f'Created Category:  {categoryName}')
+        return True
+
+
     def InsertDayCandle(self, daycandles):
         """INSERT into DayCandle table of SoFIAT Database"""
         for i, candle in daycandles.iterrows():
@@ -302,29 +343,8 @@ class DataBaseAPI(BaseAPI, TableMixin):
         return True
 
 
-    def CreateProduct(self, productName, categoryName):
-        """INSERT into Product table of SoFIAT Database"""
-        connection = self.engine.connect()
-        statement = self.Product.insert().values(
-                        fk_idCategory_Product  =  self._get_category_id(categoryName),
-                        ticker = productName)
-        connection.execute(statement)
-        self.log(f'Created Product:  {productName} - {categoryName}')
-        return True
-
-
-    def CreateCategory(self, name):
-        """INSERT into Category table of SoFIAT Database"""
-        connection = self.engine.connect()
-        query = self.Category.insert().values(
-                        name = name)
-        result = connection.execute(query)
-        self.log(f'Created Category:  {categoryName}')
-        return True
-
-
     def InsertPortfolio(self, params):
-        """INSERT fills from successful Binance order payload"""
+        """ INSERT fills from successful Binance order payload """
         connection = self.engine.connect()
         statement = self.Portfolio.insert().values(
                 asOfDate  = params.get('asOfDate', datetime.now()),
@@ -338,6 +358,33 @@ class DataBaseAPI(BaseAPI, TableMixin):
         self.log(f"Committed: Portfolio Snapshots: {params.get('valuation')}")
         return True
 
+
+    def InsertGainsTable(self, gains_frame):
+        """INSERT computed gains from trades into gains table"""
+        connection = self.engine.connect()
+
+        #Iterate through fills passed in from Binance Order table
+        for i, row in gains_frame.iterrows():
+            #print(gains_frame['time'])
+            print(row['time'].to_pydatetime(), type(row['time']))
+
+            statement = self.Gains.select(self.Gains).where(
+                                    self.GainsTable.c.symbol == row['symbol'],
+                                    self.GainsTable.c.cycleTime == row['time'].to_pydatetime()
+                                    )
+            new_table = connection.execute(statement).first()
+
+            #Insert gains for each fill of the Binance Order
+            if new_table is None:
+                statement = self.BinanceFill.insert().values(
+                                symbol       = row['symbol'],
+                                cycleTime    = row['time'].to_pydatetime(),
+                                gainPercent  = row['gain[%]'],
+                                gainAmount   = row['gain[$]'],
+                                fk_idProduct_Gains = self._get_product_id(row['symbol'])
+                                )
+                result = connection.execute(statement)
+        return True
 
     ############################################################################
     ### HELPER functions
@@ -353,6 +400,7 @@ class DataBaseAPI(BaseAPI, TableMixin):
             return None
         return result.idCategory
 
+
     def _get_product_id(self, ticker):
         """Obtain given idProduct when given ticker"""
         connection = self.engine.connect()
@@ -362,6 +410,7 @@ class DataBaseAPI(BaseAPI, TableMixin):
             self.log(f"Ticker {ticker} doesn't exist")
             return None
         return result.idProduct
+
 
     def _get_product_ticker(self, product_id):
         """Return ticker when given product_id"""

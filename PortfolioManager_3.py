@@ -8,7 +8,8 @@ SoFIAT Capital (All rights reserved)
 ################################################################################
 #SoFIAT modules
 from singularity.base import BaseAPI
-from singularity import DataBaseAPI
+from singularity.DataBaseAPI_3 import DataBaseAPI
+#from singularity import DataBaseAPI
 from singularity import BinanceAPI
 #Python modules
 import pandas as pd
