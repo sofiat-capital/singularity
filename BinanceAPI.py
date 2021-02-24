@@ -154,6 +154,7 @@ class BinanceAPI(BaseAPI):
         frame = pd.DataFrame([self._format_kline(kline) for kline in self.response])
         frame['symbol']   = [symbol] * len(frame)
         frame['interval'] = [interval] * len(frame)
+
         return frame
 
 
