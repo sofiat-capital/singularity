@@ -297,7 +297,7 @@ class DataBaseAPI(BaseAPI):
         session.close()
         return product_list
 
-    def GetDayCandleFrame(self, symbol='ETHUSDT', columns = None):
+    def GetCandleStickFrame(self, symbol='ETHUSDT', columns = None):
         """SELECT from DayCandles table of SoFIAT Database"""
         #IF columns isn't provided in param list, return all columns in table
         columns = ['date','open', 'hi', 'low', 'close', 'volume', 'numTrades']

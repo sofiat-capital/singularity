@@ -151,8 +151,10 @@ class BinanceAPI(BaseAPI):
         url += body
         #self.log(url)
         self.response = json.loads(requests.get(url).content)
+        print(self.response)
         frame = pd.DataFrame([self._format_kline(kline) for kline in self.response])
-        frame['symbol'] = [symbol] * len(frame)
+        frame['symbol']   = [symbol]   * len(frame)
+        frame['interval'] = [interval] * len(frame)
 
         ['open_time', 'volume close_time',
         'open high',
@@ -289,4 +291,6 @@ class BinanceAPI(BaseAPI):
         [kline_frame.update({name : value}) for name, value in zip(kline_map, kline)]
         kline_frame['open_time']  = '{}'.format(self.from_timestamp(kline_frame['open_time']/1000))
         kline_frame['close_time'] = '{}'.format(self.from_timestamp(kline_frame['close_time']/1000))
+        for col in ["open", "high", "low", "close", "volume"]:
+            kline_frame[col] = float(kline_frame[col])
         return kline_frame
