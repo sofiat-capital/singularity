@@ -59,7 +59,7 @@ class DataBaseAPI(BaseAPI):
         ### SQL Alchemy Models
         self.Category     = self.engine.models.get('category')
         self.Product      = self.engine.models.get('product')
-        self.DayCandle    = self.engine.models.get('dayCandle')
+        self.CandleStick  = self.engine.models.get('candleStick')
         self.Transaction  = self.engine.models.get('transaction')
         self.RealTime     = self.engine.models.get('realTime')
         self.BinanceOrder = self.engine.models.get('binanceOrder')
@@ -79,21 +79,33 @@ class DataBaseAPI(BaseAPI):
     ############################################################################
     ### Insert FUNCTIONS
     ############################################################################
-    def InsertDayCandle(self, daycandles):
-        """INSERT into DayCandle table of SoFIAT Database"""
+    def InsertCandleStick(self, candles):
+        """INSERT into CandleStick table of SoFIAT Database"""
         session = self.engine.Session()
-        for i, candle in daycandles.iterrows():
-            element = self.DayCandle(fk_idproduct_dayCandle = self._get_product_id(candle['symbol']),
-                                     date   = candle['close_time'],
-                                     low    = float(candle['low']),
-                                     hi     = float(candle['high']),
-                                     open   = float(candle['open']),
-                                     close  = float(candle['close']),
-                                     volume = float(candle['volume']),
-                                     numTrades = int(candle['number_of_trades'])
-                                   )
-            session.add(element)
-        self.log('Record inserted successfully into dayCandle {}'.format(candle['symbol']))
+
+        for i, candle in candles.iterrows():
+            ## make sure it's not there
+
+            candle_query = session.query(self.CandleStick).filter(
+                                self.CandleStick.closeTime == candle['close_time'],
+                                self.CandleStick.openTime  == candle['open_time']).all()
+
+            if not candle_query:
+                element = self.CandleStick(fk_idproduct_candleStick = self._get_product_id(candle['symbol']),
+                                         openTime    = candle['open_time'],
+                                         closeTime   = candle['close_time'],
+                                         low         = float(candle['low']),
+                                         hi          = float(candle['high']),
+                                         open        = float(candle['open']),
+                                         close       = float(candle['close']),
+                                         volume      = float(candle['volume']),
+                                         numTrades   = int(candle['number_of_trades']),
+                                         interval    = candle['interval']
+                                       )
+                session.add(element)
+                self.log('Record inserted successfully into CandleStick {}'.format(candle['symbol']))
+            else:
+                print('candle exists!!!')
         session.commit()
         session.close()
         return
@@ -297,27 +309,33 @@ class DataBaseAPI(BaseAPI):
         session.close()
         return product_list
 
-    def GetCandleStickFrame(self, symbol='ETHUSDT', columns = None):
-        """SELECT from DayCandles table of SoFIAT Database"""
+    def GetCandleStickFrame(self, interval, symbol='ETHUSDT'):
+        """SELECT from CandleSticks table of SoFIAT Database"""
         #IF columns isn't provided in param list, return all columns in table
-        columns = ['date','open', 'hi', 'low', 'close', 'volume', 'numTrades']
+        columns = ['open_time', 'close_time', 'open', 'hi', 'low', 'close', 'volume', 'numTrades', 'interval']
         session =  self.engine.Session()
         product_id = self._get_product_id(ticker = symbol)
-        day_candles = session.query(self.DayCandle).filter(
-                            self.DayCandle.fk_idproduct_dayCandle == product_id).all()
+        day_candles = session.query(self.CandleStick).filter(
+                                    self.CandleStick.fk_idproduct_candleStick == product_id).all()
         reformat = []
         for candle in list(set(day_candles)):
-            reformat.append([candle.date,
+            reformat.append([candle.openTime,
+                             candle.closeTime,
                              candle.open,
                              candle.hi,
                              candle.low,
                              candle.close,
                              candle.volume,
-                             candle.numTrades])
+                             candle.numTrades,
+                             candle.interval])
+
         frame = pd.DataFrame(data = reformat,
                              columns = columns)
-        frame['date'] = pd.to_datetime(frame['date'], format='%Y-%m-%d')
-        frame = frame.set_index('date').sort_index()
+
+        frame['open_time']  = pd.to_datetime(frame['open_time'])
+        frame['close_time'] = pd.to_datetime(frame['close_time'])
+
+        frame = frame.set_index('close_time').sort_index()
         session.close()
         return frame
 
@@ -341,8 +359,8 @@ class DataBaseAPI(BaseAPI):
         session = self.engine.Session()
 
         order = session.query(self.OrderQueue).filter(
-                                                    self.OrderQueue.idorderQueue == order.idorderQueue
-                                                    ).one_or_none()
+                                                self.OrderQueue.idorderQueue == order.idorderQueue
+                                                ).one_or_none()
         if order:
             order.executed = True
             session.add(order)
@@ -369,10 +387,10 @@ class DataBaseAPI(BaseAPI):
                             self.RealTime.fk_idproduct_realTime == product_id,
                             self.RealTime.observedTime.between(start_time, end_time)
                             ).order_by(
-                            self.RealTime.observedTime).all()
+                                self.RealTime.observedTime
+                            ).all()
         session.close()
         return realtime
-
 
     ############################################################################
     ### HELPER FUNCTIONS
