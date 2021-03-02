@@ -5,12 +5,12 @@ EMAIL  :  dev.sofiat@gmail.com
 SoFIAT Capital (All rights reserved)
 '''
 ############################################################################
-#Python Modules
+#System Modules
 import os, sys
+#Python Modules
 import numpy as np
 import pandas as pd
 import datetime
-
 from sqlalchemy import (create_engine, MetaData, Column,
         Integer, String, Table)
 from datetime import datetime, timedelta
@@ -85,10 +85,10 @@ class DataBaseAPI(BaseAPI):
 
         for i, candle in candles.iterrows():
             ## make sure it's not there
-
             candle_query = session.query(self.CandleStick).filter(
                                 self.CandleStick.closeTime == candle['close_time'],
-                                self.CandleStick.openTime  == candle['open_time']).all()
+                                self.CandleStick.openTime  == candle['open_time'],
+                                self.CandleStick.interval  == candle['interval']).all()
 
             if not candle_query:
                 element = self.CandleStick(fk_idproduct_candleStick = self._get_product_id(candle['symbol']),
@@ -103,9 +103,8 @@ class DataBaseAPI(BaseAPI):
                                          interval    = candle['interval']
                                        )
                 session.add(element)
-                self.log('Record inserted successfully into CandleStick {}'.format(candle['symbol']))
             else:
-                print('candle exists!!!')
+                pass
         session.commit()
         session.close()
         return
