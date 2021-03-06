@@ -149,9 +149,9 @@ class BinanceAPI(BaseAPI):
         if params:
             body += '&' + '&'.join(f'{key}={value}' for key, value in params.items())
         url += body
-        #self.log(url)
+        
         self.response = json.loads(requests.get(url).content)
-        print(self.response)
+
         frame = pd.DataFrame([self._format_kline(kline) for kline in self.response])
         frame['symbol']   = [symbol] * len(frame)
         frame['interval'] = [interval] * len(frame)
