@@ -25,8 +25,13 @@ class PortfolioManager(BaseAPI):
         self.skype = None
         self.log('Initialized PortfolioManager')
         self.symbols = self.DataBaseAPI.GetProductTickers()
+        self.Initialize()
         return
 ################################################################################
+    def Initialize(self):
+        self.initial_balance = self.GetUSDTotal()
+        return
+
     def GetBalance(self, symbol = None):
         """Return account balance"""
         self.wallet = self.BinanceAPI.AccountInfo()
@@ -39,7 +44,6 @@ class PortfolioManager(BaseAPI):
                     self.log(f"Your balance  of {balance.get('free')} is...")
             return Decimal(balance.get('free')) if balance else None
             self.log(f" Balance {self.wallet['balance']} Time {datetime.now()}")
-
         return self.wallet.get('balances')
 
 

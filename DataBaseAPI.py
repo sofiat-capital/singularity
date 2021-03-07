@@ -370,26 +370,7 @@ class DataBaseAPI(BaseAPI):
         return False
 
 
-    def GetRealTime(self, start_time, end_time = None, symbol='ETHUSDT'):
-        """PRECONDITION: (Start TIMESTAMPOBJ, End TIMESTAMP OBJ, Symbol)"""
-        """SELECT from RealTime table of SoFIAT Database"""
-        session =  self.engine.Session()
-        product_id = self._get_product_id(symbol)
 
-        #If no max_date is provided, assume CURRENT is max_date
-        if end_time is None:
-            end_time = self.current_time
-
-        #SELECT a window from RealTime table
-        session.flush(self.RealTime)
-        realtime = session.query(self.RealTime).filter(
-                            self.RealTime.fk_idproduct_realTime == product_id,
-                            self.RealTime.observedTime.between(start_time, end_time)
-                            ).order_by(
-                                self.RealTime.observedTime
-                            ).all()
-        session.close()
-        return realtime
 
     ############################################################################
     ### HELPER FUNCTIONS
@@ -433,7 +414,6 @@ class DataBaseAPI(BaseAPI):
         #
         return orders
 
-
     def GetProductTickers(self):
         """SELECT and return only ticker column"""
         session = self.engine.Session()
@@ -445,41 +425,5 @@ class DataBaseAPI(BaseAPI):
         return tickers
 
 ################################################################################
-    '''
-    def GetOrderQueue(self):
-        """ BinanceMaster.py utilizes to pass orders to Binance Endpoint  """
-        session =  self.engine.Session()
-        #columns = ['1','2']
-
-        #Creates SELECT statement in SQLAlchemy (Primarily for testing???)
-        if filled is None:
-            order_queue = session.query(self.OrderQueue).order_by(
-                    self.OrderQueue.timestamp.asc()).all()
-        else:
-            order_queue = session.query(self.OrderQueue).filter(
-                    self.OrderQueue.filled == filled
-                    ).order_by(self.OrderQueue.timestamp.asc()).all()
-        session.close()
-        return order_queue if order_queue else None
-        '''
-
-    '''
-    def InsertOrderQueue(self, **params):
-        """INSERT order queue entry from BUY/SELL signal"""
-        session = self.engine.Session()
-        product_id = self._get_product_id(params.get('symbol'))
-
-        order = self.OrderQueue(fk_idproduct_orderQueue = product_id,
-                                      side        = params['side'],
-                                      timeCreated = params.get('timeCreated', datetime.now()),
-                                      price       = params.get('price', None),
-                                      quantity    = params.get('quantity', None),
-                                      timeFilled  = params.get('timeFilled', None)
-                                      )
-
-        session.add(order)
-        session.commit()
-        self.log(f'committed: Order {params.get("symbol")} - {params.get("side")} to OrderQueue')
-        session.close()
-        return True
-    '''
+if __name__ == '__main__':
+    db = DataBaseAPI()
