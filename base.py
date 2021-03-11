@@ -68,7 +68,7 @@ class BaseAPI(object):
     def log(self, msg="", flush=False, to_skype=False):
         output = '{} - {}: {}'.format(self.current_time, self.__class__.__name__, msg)
         if flush:
-            print(output, end='\r')
+            print(output, end = '\r', flush=True)
             #sys.stdout.flush()
         else:
             print(output)
