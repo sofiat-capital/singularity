@@ -149,13 +149,12 @@ class BinanceAPI(BaseAPI):
         if params:
             body += '&' + '&'.join(f'{key}={value}' for key, value in params.items())
         url += body
-        
+
         self.response = json.loads(requests.get(url).content)
 
         frame = pd.DataFrame([self._format_kline(kline) for kline in self.response])
         frame['symbol']   = [symbol] * len(frame)
         frame['interval'] = [interval] * len(frame)
-
         return frame
 
 
@@ -222,6 +221,63 @@ class BinanceAPI(BaseAPI):
         return self.response
 
 
+    def CancelOrder(self, **params):
+        """ Query Open Binance Orders """
+        session = requests.Session()
+        url = self.keychain.get('basepoint') + self._endpoints.get('queryOrder')
+        if params.get("timestamp", None) is None:
+            params['timestamp'] = self.current_timestamp
+
+        params.update(self.gen_authenticator(params))
+        headers = self.gen_headers()
+        body = self.gen_payload(params)
+        session.headers.update(headers)
+        url += '?' + body
+        self.log("Querying Order Request")
+        self.response = json.loads(session.delete(url).content)
+        self.log(json.dumps(self.response, indent = 4))
+        session.close()
+        return self.response
+
+
+    def QueryOrder(self, **params):
+        """ Query Open Binance Orders """
+        session = requests.Session()
+        url = self.keychain.get('basepoint') + self._endpoints.get('queryOrder')
+        if params.get("timestamp", None) is None:
+            params['timestamp'] = self.current_timestamp
+
+        params.update(self.gen_authenticator(params))
+        headers = self.gen_headers()
+        body = self.gen_payload(params)
+        session.headers.update(headers)
+        url += '?' + body
+        self.log("Querying Order Request")
+        self.response = json.loads(session.get(url).content)
+        self.log(json.dumps(self.response, indent = 4))
+        session.close()
+        return self.response
+
+
+    def CurrentOpenOrders(self, **params):
+        """ Query Open Binance Orders """
+        session = requests.Session()
+        url = self.keychain.get('basepoint') + self._endpoints.get('currentOpenOrders')
+        if params.get("timestamp", None) is None:
+            params['timestamp'] = self.current_timestamp
+
+        params.update(self.gen_authenticator(params))
+        headers = self.gen_headers()
+        body = self.gen_payload(params)
+        session.headers.update(headers)
+        url += '?' + body
+        self.log("Querying Open Orders")
+        self.response = json.loads(session.get(url).content)
+        #self.log(json.dumps(self.response, indent = 4))
+        session.close()
+        return self.response
+
+
     def gen_authenticator(self, params):
         """CREATE HASHED MESSAGE TO SEND TO BINANCE API"""
         self.log("Authenticating... ")
@@ -234,6 +290,7 @@ class BinanceAPI(BaseAPI):
         hasher = hmac.new(byte_secret, byte_payload, digestmod='sha256')
         # Hash entire message (SecretKey, Payload)
         return {'signature' : hasher.hexdigest()}
+
 
     def AccountInfo(self, **params):
         """ACCOUNTINFORMATION ENDPOINT of BINANCE API"""
