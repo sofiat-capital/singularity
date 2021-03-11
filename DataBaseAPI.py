@@ -43,7 +43,6 @@ class SQLEngine(BaseAPI):
         self.base = automap_base()
         self.base.prepare(self.Engine, reflect=True)
         self.models = self.base.classes
-        #self.log('Initializing SQL Engine')
         return
 
 
@@ -132,23 +131,39 @@ class DataBaseAPI(BaseAPI):
 
     def InsertOrderQueue(self, **params):
         """INSERT order queue entry from BUY/SELL signal"""
+        #Create a session
         session = self.engine.Session()
+
+        #Obtains a product_id given the symbol passed
         product_id = self._get_product_id(params.get('symbol'))
 
-        start_date = datetime.now() - timedelta(seconds = params.get('interval', 60 * 30))
-        order = session.query(self.OrderQueue).filter(
+        print('Order queue: '.format(params))
+
+        #Ensures current time is not still within same binance sampling window
+                                                                                #BINANCE SAMPLING RATE / WINDOW
+        start_date = datetime.now() - timedelta(seconds = params.get('interval', 30 * 60))
+
+        #Query Order Queue table for desired product within the sampling window
+        orders = session.query(self.OrderQueue).filter(
                             self.OrderQueue.fk_idproduct_orderQueue == product_id,
                             self.OrderQueue.side == params['side'],
+                            self.OrderQueue.executed == False,
                             self.OrderQueue.timeCreated > start_date).all()
 
-        if order:
+        #Cancel order if looking at same Binance sampling window as last order
+        if len(orders) > 0:
+            for order in orders:
+                print(order.side, order.price, order.executed, order.timeCreated)
+
             session.close()
             return False
 
+        #Build the order
         order = self.OrderQueue(fk_idproduct_orderQueue = product_id,
                                       side        = params['side'],
                                       timeCreated = params.get('timeCreated', datetime.now()),
-                                      price       = params.get('price')
+                                      price       = params.get('price'),
+                                      type        = params.get('type', 'MARKET')
                                       )
         session.add(order)
         session.commit()
@@ -257,10 +272,8 @@ class DataBaseAPI(BaseAPI):
                         fk_idproduct_gainsTable = self._get_product_id(row['symbol'])
                         )
                 session.add(new_table)
-
         session.commit()
         session.close()
-
         return
 
     ############################################################################
@@ -339,19 +352,19 @@ class DataBaseAPI(BaseAPI):
         return frame
 
 
-    def GetPendingOrderQueue(self, delta):
+    def GetPendingOrderQueue(self, delta, type='MARKET'):
         """SELECT newest OrderQueue row within a defined time delta"""
         session =  self.engine.Session()
         delta = timedelta(seconds=delta)
         order = session.query(self.OrderQueue).filter(
-                                                    self.OrderQueue.executed == False
+                                                    self.OrderQueue.executed == False,
+                                                    self.OrderQueue.type == type,
                                                     ).order_by(self.OrderQueue.timeCreated.desc()).first()
         if order is None or (datetime.now() - order.timeCreated > delta):
             ####   stale order condition
             return None
         session.close()
         return order
-
 
     def UpdateOrderQueue(self, order):
         """SELECT newest OrderQueue row within a defined time delta"""
@@ -411,7 +424,6 @@ class DataBaseAPI(BaseAPI):
         orders = session.query(self.BinanceOrder).join(self.BinanceFill).filter(
                             self.BinanceOrder.fk_idproduct_binanceOrder == product_id
                             ).order_by(self.BinanceOrder.transactTime.desc()).all()
-        #
         return orders
 
     def GetProductTickers(self):
