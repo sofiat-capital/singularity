@@ -141,7 +141,7 @@ class DataBaseAPI(BaseAPI):
 
         #Ensures current time is not still within same binance sampling window
                                                                                 #BINANCE SAMPLING RATE / WINDOW
-        start_date = datetime.now() - timedelta(seconds = params.get('interval', 30 * 60))
+        start_date = datetime.now() - timedelta(seconds = params.get('interval', 15 * 60))
 
         #Query Order Queue table for desired product within the sampling window
         orders = session.query(self.OrderQueue).filter(

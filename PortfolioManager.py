@@ -154,7 +154,6 @@ class PortfolioManager(BaseAPI):
         return
 
 
-
     def CashOut(self):
         """ Emergency market exit to USD
             trades all nonzero balances to USD
